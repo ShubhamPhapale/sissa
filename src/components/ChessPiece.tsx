@@ -6,6 +6,7 @@ interface ChessPieceProps {
   piece: string | null;
   size?: number;
   className?: string;
+  onDragStart?: (e: React.DragEvent) => void;
 }
 
 const pieceToSvgName: Record<string, string> = {
@@ -13,7 +14,7 @@ const pieceToSvgName: Record<string, string> = {
   k: "Chess_kdt45.svg", q: "Chess_qdt45.svg", r: "Chess_rdt45.svg", b: "Chess_bdt45.svg", n: "Chess_ndt45.svg", p: "Chess_pdt45.svg",
 };
 
-export default function ChessPiece({ piece, size = 40, className = "" }: ChessPieceProps) {
+export default function ChessPiece({ piece, size = 40, className = "", onDragStart }: ChessPieceProps) {
   if (!piece) return null;
   
   const svgName = pieceToSvgName[piece];
@@ -21,7 +22,9 @@ export default function ChessPiece({ piece, size = 40, className = "" }: ChessPi
   
   return (
     <div
-      className={`select-none flex items-center justify-center ${className}`}
+      draggable={!!onDragStart}
+      onDragStart={onDragStart}
+      className={`select-none flex items-center justify-center cursor-grab active:cursor-grabbing ${className}`}
       style={{ width: `${size}px`, height: `${size}px` }}
     >
       <Image
@@ -29,7 +32,7 @@ export default function ChessPiece({ piece, size = 40, className = "" }: ChessPi
         alt={piece}
         width={size}
         height={size}
-        className="object-contain drop-shadow-md"
+        className="object-contain drop-shadow-md pointer-events-none"
         priority
       />
     </div>

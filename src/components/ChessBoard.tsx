@@ -269,6 +269,13 @@ export default function ChessBoard({
                   isCheck ? "check" : ""
                 } ${isPremoveSelected || isPremoveTarget ? "premove" : ""}`}
                 onClick={() => handleSquareClick(row, col)}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleSquareClick(row, col);
+                }}
               >
                 {showRankLabel && <span className="rank-label">{8 - row}</span>}
                 {showFileLabel && <span className="file-label">{fileLetters[col]}</span>}
@@ -280,6 +287,16 @@ export default function ChessBoard({
                     className={`chess-piece ${
                       isSelected ? "dragging" : ""
                     }`}
+                    onDragStart={(e) => {
+                      // Only allow dragging if we are interactive and it's either our turn or we want to premove
+                      const clickedColor = piece === piece.toUpperCase() ? "w" : "b";
+                      if (interactive && !gameState.gameOver && (gameState.turn === playerColor || clickedColor === playerColor || allowBothColors)) {
+                        // First click the square to select it
+                        handleSquareClick(row, col);
+                      } else {
+                        e.preventDefault();
+                      }
+                    }}
                   />
                 )}
 
