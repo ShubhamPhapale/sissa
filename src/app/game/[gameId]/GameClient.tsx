@@ -705,7 +705,7 @@ export default function GameClient() {
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      <main className="flex-1 p-4">
+      <main className="flex-1 w-full bg-transparent">
         <div className="mx-auto max-w-6xl">
           {/* Status bar */}
             <div className="flex flex-wrap items-center justify-between gap-2 mb-6">

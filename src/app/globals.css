@@ -5,15 +5,15 @@
   --chess-light: #ebecd0;
   --chess-green-dark: #4f6a35;
   --chess-light-dark: #dfd8b8;
-  --bg-dark: #161512;
+  --bg-dark: #312e2b;
   --bg-card: #262421;
-  --bg-input: #302e2c;
-  --accent: #3692e7;
-  --accent-hover: #237bce;
-  --text-primary: #c9d1d9;
-  --text-secondary: #999;
-  --text-muted: #737373;
-  --border: #404040;
+  --bg-input: #3d3935;
+  --accent: #81b64c;
+  --accent-hover: #8fca55;
+  --text-primary: #f8f8f8;
+  --text-secondary: #c3c3c2;
+  --text-muted: #8b8987;
+  --border: #403d39;
   --highlight: rgba(255, 255, 51, 0.5);
   --legal-dot: rgba(0, 0, 0, 0.2);
 }

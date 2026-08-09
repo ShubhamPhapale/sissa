@@ -14,7 +14,11 @@ export async function GET(req: NextRequest) {
     const [user] = await db.select({
       id: users.id,
       username: users.username,
-      rating: users.rating,
+      rating: users.rapidRating, // Default to rapid for general display
+      bulletRating: users.bulletRating,
+      blitzRating: users.blitzRating,
+      rapidRating: users.rapidRating,
+      classicalRating: users.classicalRating,
       wins: users.wins,
       losses: users.losses,
       draws: users.draws

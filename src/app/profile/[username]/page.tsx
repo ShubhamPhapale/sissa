@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import Link from "next/link";
 import { formatTime } from "@/lib/utils";
+import ProfileSettings from "@/components/ProfileSettings";
+import { User } from "@/components/AuthProvider";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +39,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
         
         {/* Profile Header */}
         <div className="card p-6 md:p-8 flex flex-col md:flex-row gap-8 items-start mb-8">
-          <div className="w-24 h-24 shrink-0 rounded-2xl bg-gradient-to-br from-[var(--accent)] to-orange-600 shadow-xl shadow-orange-500/20 flex items-center justify-center text-4xl font-bold text-white uppercase">
+          <div className="w-24 h-24 shrink-0 rounded-2xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] shadow-xl shadow-orange-500/10 flex items-center justify-center text-4xl font-bold text-white uppercase">
             {user.username.substring(0, 2)}
           </div>
           
@@ -55,106 +57,109 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             </div>
           </div>
           
-          <div className="shrink-0 card bg-[var(--bg-input)] border-transparent w-full md:w-auto p-4 flex flex-col items-center">
+          <div className="shrink-0 card bg-[var(--bg-input)] border-transparent w-full md:w-auto p-5 flex flex-col items-center justify-center">
             <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1">Win Rate</div>
-            <div className="text-3xl font-black text-white">{winRate}%</div>
-            <div className="text-xs text-[var(--text-secondary)] mt-2">
-              <span className="text-green-400 font-semibold">{user.wins}</span>W - <span className="text-gray-400 font-semibold">{user.draws}</span>D - <span className="text-red-400 font-semibold">{user.losses}</span>L
+            <div className="text-4xl font-black text-white">{winRate}%</div>
+            <div className="text-xs text-[var(--text-secondary)] mt-1">{totalGames} games</div>
+            <div className="flex items-center gap-3 text-sm font-bold mt-4 bg-[#1e1e1e] px-3 py-1.5 rounded-md shadow-inner">
+              <span className="text-green-500 flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-green-500" />{user.wins}</span>
+              <span className="text-gray-400 flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-gray-400" />{user.draws}</span>
+              <span className="text-red-500 flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-red-500" />{user.losses}</span>
             </div>
           </div>
         </div>
 
-        {/* Match History */}
-        <h2 className="text-xl font-bold text-white mb-4">Match History</h2>
-        
-        {recentGames.length === 0 ? (
-          <div className="card p-12 text-center text-[var(--text-muted)]">
-            No games played yet.
-          </div>
-        ) : (
-          <div className="card p-0 overflow-hidden border border-white/10">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-black/30 border-b border-white/10">
-                  <th className="p-4 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Players</th>
-                  <th className="p-4 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] hidden sm:table-cell">Result</th>
-                  <th className="p-4 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] hidden md:table-cell">Accuracy</th>
-                  <th className="p-4 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] text-right">Time</th>
-                  <th className="p-4 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] text-right">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {recentGames.map((g) => {
-                  const isWhite = g.whitePlayerId === user.id;
-                  const won = g.winner === (isWhite ? 'w' : 'b');
-                  const draw = g.winner === 'draw';
-                  const lost = g.winner && !won && !draw;
-                  
-                  const whiteName = g.whitePlayerName || "Anonymous";
-                  const blackName = g.blackPlayerName || "Anonymous";
-                  
-                  // Extract accuracy if analysis is present
-                  let accuracy = null;
-                  if (g.analysis) {
-                    try {
-                      const analysis = typeof g.analysis === 'string' ? JSON.parse(g.analysis) : g.analysis;
-                      accuracy = isWhite ? analysis.whiteAccuracy : analysis.blackAccuracy;
-                    } catch {
-                      // ignore parse errors
-                    }
-                  }
-
-                  return (
-                    <tr key={g.id} className="hover:bg-white/5 transition-colors group">
-                      <td className="p-4">
-                        <Link href={`/game/${g.id}`} className="flex flex-col gap-1">
-                          <div className={`font-semibold ${isWhite ? "text-white" : "text-[var(--text-secondary)]"}`}>
-                            <span className="text-[10px] bg-white/10 px-1 rounded mr-1">W</span> {whiteName}
-                          </div>
-                          <div className={`font-semibold ${!isWhite ? "text-white" : "text-[var(--text-secondary)]"}`}>
-                            <span className="text-[10px] bg-black/40 border border-white/10 px-1 rounded mr-1">B</span> {blackName}
-                          </div>
-                        </Link>
-                      </td>
-                      
-                      <td className="p-4 hidden sm:table-cell">
-                        <Link href={`/game/${g.id}`}>
-                          {g.status === 'playing' ? (
-                            <span className="badge badge-blue">Live</span>
-                          ) : (
-                            <span className={`badge ${won ? 'badge-green' : lost ? 'bg-red-500/20 text-red-300' : 'badge-secondary'}`}>
-                              {won ? 'Won' : lost ? 'Lost' : 'Draw'}
-                            </span>
-                          )}
-                        </Link>
-                      </td>
-                      
-                      <td className="p-4 hidden md:table-cell">
-                        {accuracy !== null && accuracy !== undefined ? (
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold tabular-nums text-[var(--accent)]">{Number(accuracy).toFixed(1)}</span>
-                          </div>
-                        ) : (
-                          <span className="text-[var(--text-muted)] text-sm">-</span>
-                        )}
-                      </td>
-                      
-                      <td className="p-4 text-right text-[var(--text-secondary)] tabular-nums font-mono text-sm">
-                        {formatTime(g.timeControl)}{g.increment ? `+${g.increment}` : ""}
-                      </td>
-                      
-                      <td className="p-4 text-right text-[var(--text-secondary)] text-sm whitespace-nowrap">
-                        <Link href={`/game/${g.id}`} className="hover:text-white transition-colors">
-                          {new Date(g.createdAt).toLocaleDateString()}
-                        </Link>
-                      </td>
+        {/* Game History */}
+        <div className="mb-8">
+          <h2 className="text-xl font-bold mb-4 px-1 text-white flex items-center gap-2">
+            <span>⚔️</span> Recent Games
+          </h2>
+          
+          {recentGames.length === 0 ? (
+            <div className="card p-12 text-center text-[var(--text-secondary)]">
+              No games played yet.
+            </div>
+          ) : (
+            <div className="card overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-[var(--border)] text-xs text-[var(--text-muted)] uppercase tracking-wider bg-[var(--bg-input)]">
+                      <th className="p-4 font-medium pl-6">Result</th>
+                      <th className="p-4 font-medium">Opponent</th>
+                      <th className="p-4 font-medium">Time Control</th>
+                      <th className="p-4 font-medium">Accuracy</th>
+                      <th className="p-4 font-medium text-right pr-6">Date</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                  </thead>
+                  <tbody className="divide-y divide-[var(--border)]">
+                    {recentGames.map((game) => {
+                      const isWhite = game.whitePlayerId === user.id;
+                      const opponent = isWhite ? game.blackPlayerName : game.whitePlayerName;
+                      
+                      let resultText = "Draw";
+                      let resultColor = "bg-gray-600 text-gray-100";
+                      
+                      if (game.winner === "w") {
+                        resultText = isWhite ? "Won" : "Lost";
+                        resultColor = isWhite ? "bg-green-600/90 text-white" : "bg-red-600/90 text-white";
+                      } else if (game.winner === "b") {
+                        resultText = !isWhite ? "Won" : "Lost";
+                        resultColor = !isWhite ? "bg-green-600/90 text-white" : "bg-red-600/90 text-white";
+                      } else if (game.status === "aborted") {
+                        resultText = "Aborted";
+                        resultColor = "bg-yellow-600/80 text-white";
+                      }
+
+                      // Accuracy logic (assuming analysis has .whiteAccuracy or .blackAccuracy)
+                      let accuracy = null;
+                      if (game.analysis) {
+                        try {
+                          const parsed = typeof game.analysis === "string" ? JSON.parse(game.analysis) : game.analysis;
+                          accuracy = isWhite ? parsed.whiteAccuracy : parsed.blackAccuracy;
+                        } catch {}
+                      }
+
+                      return (
+                        <tr key={game.id} className="hover:bg-white/[0.03] transition-colors group">
+                          <td className="p-4 pl-6 font-medium">
+                            <span className={`inline-flex px-2 py-1 rounded text-xs font-bold tracking-wide ${resultColor}`}>
+                              {resultText}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <Link href={`/game/${game.id}`} className="flex items-center gap-3">
+                              <span className={`w-3 h-3 shrink-0 rounded-sm ${isWhite ? 'bg-white shadow-sm' : 'bg-gray-800 border border-gray-600'}`} />
+                              <span className="font-bold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors">
+                                {opponent || "Anonymous"} 
+                              </span>
+                            </Link>
+                          </td>
+                          <td className="p-4 text-[var(--text-secondary)] font-mono text-sm">
+                            {formatTime(game.timeControl)}{game.increment ? `+${game.increment}` : ""}
+                          </td>
+                          <td className="p-4">
+                            {accuracy ? (
+                              <span className="text-sm font-bold text-[var(--accent)]">{accuracy}%</span>
+                            ) : (
+                              <span className="text-xs text-[var(--text-muted)]">-</span>
+                            )}
+                          </td>
+                          <td className="p-4 text-right text-[var(--text-muted)] text-sm pr-6">
+                            {new Date(game.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <ProfileSettings username={user.username} />
+
       </main>
     </div>
   );
@@ -162,9 +167,11 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
 function StatBox({ title, value }: { title: string; value: number }) {
   return (
-    <div className="bg-[var(--bg-input)] rounded-lg p-3 border border-transparent">
+    <div className="card bg-[var(--bg-input)] border-transparent p-3 flex flex-col items-center justify-center h-full">
       <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1">{title}</div>
-      <div className="text-xl font-bold text-white">{value}</div>
+      <div className="text-lg font-bold text-white">
+        {value === 1500 ? "?" : value}
+      </div>
     </div>
   );
 }
