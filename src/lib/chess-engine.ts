@@ -719,9 +719,9 @@ export function createSanTranslator(initialFen: string) {
       const fromSq = algebraicToSquare(fromStr);
       const toSq = algebraicToSquare(toStr);
 
-      const validMoves = getValidMoves(state);
+      const validMoves = getAllLegalMoves(state);
       const move = validMoves.find(
-        (vm) =>
+        (vm: Move) =>
           vm.from.row === fromSq.row &&
           vm.from.col === fromSq.col &&
           vm.to.row === toSq.row &&

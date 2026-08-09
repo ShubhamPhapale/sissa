@@ -41,6 +41,16 @@ export default function Header() {
           >
             Games
           </Link>
+          <Link
+            href="/analysis"
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              pathname === "/analysis"
+                ? "bg-[var(--accent)] text-white"
+                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            }`}
+          >
+            Analysis Board
+          </Link>
         </nav>
       </div>
     </header>
