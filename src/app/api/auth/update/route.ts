@@ -12,7 +12,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { username, password } = await req.json();
+    const { username, password, currentPassword } = await req.json();
+
+    if (!currentPassword) {
+      return NextResponse.json({ error: "Current password is required to make changes" }, { status: 400 });
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.id, session.userId));
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isMatch) {
+      return NextResponse.json({ error: "Incorrect current password" }, { status: 401 });
+    }
 
     if (username && username.length < 3) {
       return NextResponse.json(

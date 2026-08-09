@@ -139,8 +139,8 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
                             {formatTime(game.timeControl)}{game.increment ? `+${game.increment}` : ""}
                           </td>
                           <td className="p-4">
-                            {accuracy ? (
-                              <span className="text-sm font-bold text-[var(--accent)]">{accuracy}%</span>
+                            {accuracy !== null && accuracy !== undefined ? (
+                              <span className="text-sm font-bold text-[var(--accent)]">{Number(accuracy).toFixed(1)}%</span>
                             ) : (
                               <span className="text-xs text-[var(--text-muted)]">-</span>
                             )}

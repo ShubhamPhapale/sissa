@@ -9,6 +9,7 @@ export default function ProfileSettings({ username }: { username: string }) {
   const { user, setUser } = useAuth();
   
   const [newUsername, setNewUsername] = useState(username);
+  const [currentPassword, setCurrentPassword] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -19,6 +20,11 @@ export default function ProfileSettings({ username }: { username: string }) {
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentPassword) {
+      setError("Current password is required");
+      return;
+    }
+    
     setLoading(true);
     setError("");
     setSuccess("");
@@ -29,7 +35,8 @@ export default function ProfileSettings({ username }: { username: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           username: newUsername !== username ? newUsername : undefined, 
-          password: password ? password : undefined 
+          password: password ? password : undefined,
+          currentPassword
         }),
       });
 
@@ -66,6 +73,16 @@ export default function ProfileSettings({ username }: { username: string }) {
             value={newUsername}
             onChange={(e) => setNewUsername(e.target.value)}
             minLength={3}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Current Password (required to save changes)</label>
+          <input
+            type="password"
+            className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-white focus:outline-none focus:border-[var(--accent)]"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            required
           />
         </div>
         <div>

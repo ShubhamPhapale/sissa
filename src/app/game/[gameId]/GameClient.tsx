@@ -155,7 +155,7 @@ export default function GameClient() {
           const nextMove = moves[cur + 1];
           const prevMoveTime = cur >= 0 ? new Date(moves[cur].createdAt!).getTime() : new Date(game?.createdAt || Date.now()).getTime();
           const nextMoveTime = new Date(nextMove.createdAt!).getTime();
-          delay = Math.min(5000, Math.max(200, nextMoveTime - prevMoveTime)); // Cap between 200ms and 5s
+          delay = Math.max(200, nextMoveTime - prevMoveTime); // Exact actual time used
         }
 
         timeoutId = setTimeout(playNext, delay);
@@ -495,13 +495,69 @@ export default function GameClient() {
   }, [optimistic, moves]);
 
   const currentClassification = useMemo(() => {
+    if (engineEnabled && analysis?.classification) return analysis.classification;
     if (!fullGameAnalysis) return null;
-    const ply = viewPly !== null ? viewPly : moves.length - 1;
-    if (ply >= 0 && ply < fullGameAnalysis.moves.length) {
-      return fullGameAnalysis.moves[ply].classification;
+    const activePly = viewPly !== null ? viewPly : moves.length - 1;
+    if (activePly >= 0 && activePly < fullGameAnalysis.moves.length) {
+      return fullGameAnalysis.moves[activePly].classification;
     }
     return null;
-  }, [fullGameAnalysis, viewPly, moves.length]);
+  }, [engineEnabled, analysis, fullGameAnalysis, viewPly, moves.length]);
+
+  const replayClocks = useMemo(() => {
+    if (!game) return { white: 0, black: 0 };
+    let whiteTime = game.timeControl || 600;
+    let blackTime = game.timeControl || 600;
+
+    const limit = viewPly !== null ? viewPly : moves.length - 1;
+    
+    for (let i = 0; i <= limit; i++) {
+      const m = moves[i];
+      if (!m.createdAt) continue;
+      const prevTime = i === 0 && game.createdAt
+        ? new Date(game.createdAt).getTime()
+        : (i > 0 && moves[i-1].createdAt ? new Date(moves[i-1].createdAt!).getTime() : new Date(m.createdAt).getTime());
+      
+      const moveTime = Math.max(0, (new Date(m.createdAt).getTime() - prevTime) / 1000);
+      
+      if (i % 2 === 0) {
+        whiteTime -= moveTime;
+        whiteTime = Math.max(0, whiteTime) + (game.increment || 0);
+      } else {
+        blackTime -= moveTime;
+        blackTime = Math.max(0, blackTime) + (game.increment || 0);
+      }
+    }
+    
+    return { white: Math.max(0, Math.floor(whiteTime)), black: Math.max(0, Math.floor(blackTime)) };
+  }, [game, moves, viewPly]);
+
+  const [replayTickElapsed, setReplayTickElapsed] = useState(0);
+
+  useEffect(() => {
+    if (replayMode !== "realtime") {
+      setReplayTickElapsed(0);
+      return;
+    }
+    
+    const start = Date.now();
+    setReplayTickElapsed(0);
+    
+    const tick = () => {
+      setReplayTickElapsed(Math.max(0, Math.floor((Date.now() - start) / 1000)));
+    };
+    
+    const id = setInterval(tick, 250);
+    return () => clearInterval(id);
+  }, [replayMode, viewPly]);
+
+  const clockFor = (c: "w" | "b") => {
+    if (isLive && viewPly === null) return c === "w" ? clocks.white : clocks.black;
+    if (replayMode === "realtime" && displayState.turn === c) {
+      return c === "w" ? Math.max(0, replayClocks.white - replayTickElapsed) : Math.max(0, replayClocks.black - replayTickElapsed);
+    }
+    return c === "w" ? replayClocks.white : replayClocks.black;
+  };
 
   const lastMove: Move | null = useMemo(() => {
     const idx = viewPly !== null ? viewPly : moves.length - 1;
@@ -711,7 +767,6 @@ export default function GameClient() {
   const nameFor = (c: "w" | "b") =>
     (c === "w" ? game.whitePlayerName : game.blackPlayerName) || (c === "w" ? "White" : "Black");
   const ratingFor = (c: "w" | "b") => (c === "w" ? players.white?.rating : players.black?.rating);
-  const clockFor = (c: "w" | "b") => (c === "w" ? clocks.white : clocks.black);
   const capturedFor = (c: "w" | "b") => (c === "w" ? captured.byWhite : captured.byBlack);
   const advFor = (c: "w" | "b") => (c === "w" ? captured.whiteAdv : captured.blackAdv);
 

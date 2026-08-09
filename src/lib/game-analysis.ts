@@ -33,14 +33,14 @@ function parseScoreText(scoreText: string): { cp: number; isMate: boolean } {
 
 /** 
  * Calculate Win Probability from centipawns (from White's perspective).
- * Returns a value between 0 and 1.
+ * Returns a value between 0 and 1. Lichess formula.
  */
 function getWinProb(cp: number): number {
-  return 1 / (1 + Math.exp(-0.00368208 * cp));
+  return 0.5 + 0.5 * (2 / (1 + Math.exp(-0.00368208 * cp)) - 1);
 }
 
 /** 
- * Calculate move accuracy (0-100) based on WP loss. 
+ * Calculate move accuracy (0-100) based on WP loss. Lichess formula.
  */
 function getMoveAccuracy(evalBefore: number, evalAfter: number, isWhite: boolean): number {
   const wpBefore = getWinProb(isWhite ? evalBefore : -evalBefore);
@@ -48,9 +48,10 @@ function getMoveAccuracy(evalBefore: number, evalAfter: number, isWhite: boolean
   
   const wpLoss = Math.max(0, wpBefore - wpAfter);
   
-  // Approximation of Chess.com CAPS mapping:
-  // Maps 0 loss -> 100%, 0.1 loss -> 80%, etc.
-  return Math.max(0, Math.min(100, 100 * Math.exp(-3.5 * wpLoss)));
+  if (wpLoss === 0) return 100;
+  const lossPercent = wpLoss * 100;
+  const accuracy = 103.166811 * Math.exp(-0.04354 * lossPercent) - 3.166925;
+  return Math.max(0, Math.min(100, accuracy));
 }
 
 function emptyCounts(): ClassificationCounts {
@@ -192,10 +193,7 @@ export async function analyzeGame(
         classification = "best";
       }
 
-      const winProbBefore = evalToWinProb(isWhite ? evalBefore : -evalBefore);
-      const winProbAfter = evalToWinProb(isWhite ? evalAfter : -evalAfter);
-      let acc = 100 - (Math.max(0, winProbBefore - winProbAfter) * 100);
-      acc = Math.max(0, Math.min(100, acc));
+      const acc = getMoveAccuracy(evalBefore, evalAfter, isWhite);
 
       if (isWhite) whiteAccTotal += acc;
       else blackAccTotal += acc;
