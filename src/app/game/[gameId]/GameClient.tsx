@@ -763,7 +763,6 @@ export default function GameClient() {
               </div>
             </div>
           )}
-
           {!isLiveView && (
             <div className="mb-4 p-3 rounded-xl bg-yellow-900/20 border border-yellow-700/40 text-sm flex items-center justify-between">
               <span className="font-medium text-yellow-500">
@@ -775,32 +774,13 @@ export default function GameClient() {
             </div>
           )}
 
-          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 lg:items-start lg:justify-center">
-            {/* Left column */}
-            <div className="w-full lg:w-[240px] xl:w-[280px] shrink-0 flex flex-col gap-6 order-2 lg:order-1">
-              <GameControls
-                onResign={() => doAction("resign")}
-                onOfferDraw={() => doAction("offer-draw")}
-                onAcceptDraw={() => doAction("accept-draw")}
-                onDeclineDraw={() => doAction("decline-draw")}
-                onFlipBoard={() => setBoardFlipped((f) => !f)}
-                onAbort={() => doAction("abort")}
-                canAbort={game?.fen === "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"}
-                isPlayerTurn={isMyTurn}
-                isSpectator={isSpectator}
-                gameActive={Boolean(gameActive)}
-                drawOfferedBy={game.drawOfferedBy}
-                myColor={myColor}
-                busy={busy}
-              />
-            </div>
-
+          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:items-start lg:justify-center w-full max-w-[1250px] mx-auto px-2 sm:px-4">
             {/* Board */}
-            <div className="w-full flex flex-col items-center order-1 lg:order-2" style={{ maxWidth: 'min(680px, calc(100vh - 180px))' }}>
-              <div className="w-full flex flex-col gap-2">
+            <div className="w-full flex flex-col items-center order-1 lg:order-1" style={{ maxWidth: 'min(800px, calc(100vh - 120px))' }}>
+              <div className="w-full flex flex-col gap-1">
                 {/* Top Timer */}
                 <div className="w-full flex">
-                  <div className="w-4 shrink-0 mr-2" />
+                  {gameOver && <div className="w-4 shrink-0 mr-2" />}
                   <div className="flex-1 min-w-0">
                     <GameTimer
                       seconds={clockFor(topColor)}
@@ -843,7 +823,7 @@ export default function GameClient() {
 
                 {/* Bottom Timer */}
                 <div className="w-full flex">
-                  <div className="w-4 shrink-0 mr-2" />
+                  {gameOver && <div className="w-4 shrink-0 mr-2" />}
                   <div className="flex-1 min-w-0">
                     <GameTimer
                       seconds={clockFor(bottomColor)}
@@ -962,7 +942,7 @@ export default function GameClient() {
             </div>
 
             {/* Right column */}
-            <div className="w-full lg:w-[260px] xl:w-[320px] shrink-0 flex flex-col gap-4 order-3 lg:sticky lg:top-4 lg:self-start lg:h-[calc(100vh-2rem)] move-history">
+            <div className="w-full lg:w-[320px] xl:w-[380px] shrink-0 flex flex-col gap-4 order-2 lg:order-2 lg:sticky lg:top-4 lg:self-start lg:h-[calc(100vh-2rem)] move-history">
               {/* Game Review Coach Bubble */}
               {fullGameAnalysis && (() => {
                 const activeIndex = optimistic?.plies != null ? optimistic.plies - 1 : (viewPly ?? moves.length - 1);
@@ -1126,6 +1106,25 @@ export default function GameClient() {
                   </button>
                 </div>
               )}
+
+              {/* Game Controls */}
+              <div className="mt-auto">
+                <GameControls
+                  onResign={() => doAction("resign")}
+                  onOfferDraw={() => doAction("offer-draw")}
+                  onAcceptDraw={() => doAction("accept-draw")}
+                  onDeclineDraw={() => doAction("decline-draw")}
+                  onFlipBoard={() => setBoardFlipped((f) => !f)}
+                  onAbort={() => doAction("abort")}
+                  canAbort={game?.fen === "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"}
+                  isPlayerTurn={isMyTurn}
+                  isSpectator={isSpectator}
+                  gameActive={Boolean(gameActive)}
+                  drawOfferedBy={game.drawOfferedBy}
+                  myColor={myColor}
+                  busy={busy}
+                />
+              </div>
             </div>
           </div>
 

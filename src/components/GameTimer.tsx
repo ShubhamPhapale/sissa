@@ -41,44 +41,36 @@ export default function GameTimer({
   const isCritical = seconds <= 10;
 
   return (
-    <div
-      className={`flex items-center justify-between p-2 rounded-md transition-all bg-[var(--bg-card)] ${
-        isActive ? "ring-2 ring-[var(--accent)]" : "opacity-90"
-      }`}
-    >
+    <div className={`flex items-center justify-between py-2 transition-all ${isActive ? "" : "opacity-90"}`}>
       <div className="flex flex-col min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-lg shrink-0">{playerColor === "w" ? "♔" : "♚"}</span>
-          <span className="font-medium text-sm truncate">
+          <span className="font-semibold text-sm truncate text-[var(--text-primary)]">
             {playerName || (playerColor === "w" ? "White" : "Black")}
           </span>
           {typeof rating === "number" && (
-            <span className="text-xs text-[var(--text-muted)] shrink-0">({rating})</span>
+            <span className="text-xs font-medium text-[var(--text-muted)] shrink-0">({rating})</span>
           )}
-          {isYou && <span className="text-[10px] text-[var(--text-muted)] shrink-0">(you)</span>}
         </div>
-        <div className="flex items-center gap-0.5 flex-wrap min-h-[20px] mt-1">
+        <div className="flex items-center gap-0.5 flex-wrap min-h-[16px] mt-0.5 opacity-80">
           {captured.map((p, i) => (
-            <span key={i} className="text-sm leading-none">
-              {pieceToUnicode[p] ?? p}
+            <span key={i} className="text-sm leading-none" style={{ color: p === p.toLowerCase() ? "#000" : "#fff", textShadow: "0 0 1px #888" }}>
+              {pieceToUnicode[p]}
             </span>
           ))}
           {materialDiff > 0 && (
-            <span className="text-xs text-[var(--text-muted)] ml-1">+{materialDiff}</span>
+            <span className="text-[10px] text-[var(--text-muted)] font-medium ml-1">+{materialDiff}</span>
           )}
         </div>
       </div>
 
-      <div className="flex flex-col items-end">
+      <div className="relative shrink-0 text-right min-w-[100px]">
         <div
-          className={`timer text-3xl font-bold font-mono text-center py-1 px-4 rounded-md shadow-inner ${
-            isCritical && isActive
-              ? "bg-red-900/50 text-red-400 animate-pulse"
-              : isLow && isActive
-              ? "bg-yellow-900/30 text-yellow-400"
-              : isActive
-              ? "bg-[var(--bg-input)] text-[var(--text-primary)] bg-[#2a2a2a]"
-              : "bg-[#1f1f1f] text-[var(--text-secondary)]"
+          className={`px-3 py-1.5 rounded-sm font-mono text-xl font-bold tracking-wider inline-flex justify-center transition-colors shadow-sm ${
+            isActive
+              ? isCritical
+                ? "bg-red-600/90 text-white animate-pulse"
+                : "bg-[var(--bg-card)] text-white shadow-inner shadow-[var(--accent)] ring-1 ring-[var(--accent)]"
+              : "bg-[#1f1e1b] text-[var(--text-muted)]"
           }`}
         >
           {formatTime(seconds)}
