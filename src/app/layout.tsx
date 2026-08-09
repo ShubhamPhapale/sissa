@@ -21,10 +21,16 @@ export const viewport = {
   themeColor: "#0f172a",
 };
 
+import { AuthProvider } from "@/components/AuthProvider";
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   );
 }

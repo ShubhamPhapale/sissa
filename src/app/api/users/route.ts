@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     
     const [newUser] = await db
       .insert(users)
-      .values({ username })
+      .values({ username, passwordHash: "dummy" })
       .returning();
     
     return NextResponse.json({ user: newUser }, { status: 201 });

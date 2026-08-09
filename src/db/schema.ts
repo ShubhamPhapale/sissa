@@ -3,6 +3,7 @@ import { pgTable, serial, text, timestamp, integer, boolean, varchar, jsonb } fr
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: varchar("username", { length: 50 }).notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
   rating: integer("rating").notNull().default(1500),
   wins: integer("wins").notNull().default(0),
   losses: integer("losses").notNull().default(0),
@@ -46,5 +47,13 @@ export const moves = pgTable("moves", {
   checkmate: boolean("checkmate").notNull().default(false),
   castle: varchar("castle", { length: 1 }), // K or Q
   enPassant: boolean("en_passant").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export const matchmaking = pgTable("matchmaking", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id).unique(),
+  rating: integer("rating").notNull(),
+  timeControl: integer("time_control").notNull(),
+  increment: integer("increment").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

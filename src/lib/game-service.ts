@@ -233,7 +233,7 @@ export async function upsertUser(username?: string | null) {
   const [existing] = await db.select().from(users).where(eq(users.username, name));
   if (existing) return existing;
   try {
-    const [created] = await db.insert(users).values({ username: name }).returning();
+    const [created] = await db.insert(users).values({ username: name, passwordHash: "dummy" }).returning();
     return created;
   } catch {
     // Lost a race with a concurrent insert — read it back.
