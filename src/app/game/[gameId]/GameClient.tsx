@@ -454,7 +454,7 @@ export default function GameClient() {
         setAnalysisLoading(false);
         eventSource?.close();
       };
-    }, 600);
+    }, 150);
 
     return () => {
       cancelled = true;

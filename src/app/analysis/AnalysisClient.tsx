@@ -96,7 +96,7 @@ export default function AnalysisClient() {
     };
 
     // debouncing
-    const timer = setTimeout(startStream, 600);
+    const timer = setTimeout(startStream, 150);
 
     return () => {
       active = false;

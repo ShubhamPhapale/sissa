@@ -59,16 +59,22 @@ export async function GET(
             return undefined;
           };
 
+          const estimatedDuration = game.timeControl + 40 * game.increment;
+          let ratingKey: "bulletRating" | "blitzRating" | "rapidRating" | "classicalRating" = "classicalRating";
+          if (estimatedDuration < 180) ratingKey = "bulletRating";
+          else if (estimatedDuration < 480) ratingKey = "blitzRating";
+          else if (estimatedDuration < 900) ratingKey = "rapidRating";
+
           if (game.whitePlayerId) {
             const [w] = await db.select().from(users).where(eq(users.id, game.whitePlayerId));
-            if (w) players.white = { username: w.username, rating: w.rating };
+            if (w) players.white = { username: w.username, rating: w[ratingKey] };
           } else {
             const botElo = getBotElo(game.whitePlayerName);
             if (botElo) players.white = { username: game.whitePlayerName || "Stockfish", rating: botElo };
           }
           if (game.blackPlayerId) {
             const [b] = await db.select().from(users).where(eq(users.id, game.blackPlayerId));
-            if (b) players.black = { username: b.username, rating: b.rating };
+            if (b) players.black = { username: b.username, rating: b[ratingKey] };
           } else {
             const botElo = getBotElo(game.blackPlayerName);
             if (botElo) players.black = { username: game.blackPlayerName || "Stockfish", rating: botElo };

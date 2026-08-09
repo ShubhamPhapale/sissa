@@ -18,7 +18,7 @@ class StockfishSingleton {
   
   private worker: ChildProcess | null = null;
   private isProcessing = false;
-  private queue: Array<{ fen: string; depth: number; translateSan?: SanTranslator; onProgress?: (res: Partial<StockfishAnalysis>) => void; resolve: (res: StockfishAnalysis | null) => void; signal?: AbortSignal }> = [];
+  private queue: Array<{ fen: string; depth: number; skillLevel?: number; translateSan?: SanTranslator; onProgress?: (res: Partial<StockfishAnalysis>) => void; resolve: (res: StockfishAnalysis | null) => void; signal?: AbortSignal }> = [];
   
   private initPromise: Promise<void> | null = null;
 
@@ -166,6 +166,7 @@ class StockfishSingleton {
   public async analyzePosition(
     fen: string,
     depth: number = 20,
+    skillLevel: number = 20,
     translateSan?: SanTranslator,
     onProgress?: (info: Partial<StockfishAnalysis>) => void,
     signal?: AbortSignal
@@ -177,7 +178,7 @@ class StockfishSingleton {
         return resolve(null);
       }
 
-      this.queue.push({ fen, depth, translateSan, onProgress, resolve, signal });
+      this.queue.push({ fen, depth, skillLevel, translateSan, onProgress, resolve, signal });
       
       if (signal) {
         signal.addEventListener("abort", () => {
@@ -260,10 +261,5 @@ export async function analyzePosition(
   signal?: AbortSignal
 ): Promise<StockfishAnalysis | null> {
   const instance = StockfishSingleton.getInstance();
-  return new Promise((resolve) => {
-    (instance as any).queue.push({ fen, depth, skillLevel, translateSan, onProgress, resolve, signal });
-    if (!(instance as any).isProcessing) {
-      (instance as any).processQueue();
-    }
-  });
+  return instance.analyzePosition(fen, depth, skillLevel, translateSan, onProgress, signal);
 }

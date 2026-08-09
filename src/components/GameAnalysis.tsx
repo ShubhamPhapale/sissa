@@ -71,17 +71,17 @@ export default function GameAnalysis({
   // Classification badge row
   const renderClassificationRow = (type: string, count: number) => {
     return (
-      <div key={type} className="flex items-center justify-between py-1">
-        <div className="flex items-center gap-1.5 min-w-0">
+      <div key={type} className="flex items-center justify-between py-1 border-b border-[var(--border)]/50 last:border-0">
+        <div className="flex items-center gap-2">
           <span
-            className="w-2.5 h-2.5 rounded-full shrink-0"
+            className="w-2.5 h-2.5 rounded-sm shrink-0 shadow-sm"
             style={{ backgroundColor: CLASSIFICATION_COLORS[type] || "#888" }}
           />
-          <span className="text-[11px] capitalize text-[var(--text-secondary)] truncate">
+          <span className="text-xs capitalize font-medium text-[var(--text-secondary)]">
             {CLASSIFICATION_ICONS[type]} {type}
           </span>
         </div>
-        <span className="text-xs font-semibold text-[var(--text-primary)] tabular-nums ml-2 shrink-0">
+        <span className="text-xs font-bold text-[var(--text-primary)] tabular-nums ml-2">
           {count}
         </span>
       </div>
@@ -375,7 +375,7 @@ export default function GameAnalysis({
         </div>
 
         {/* Classification summaries (with accuracy) */}
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           {renderSideSummary("White", analysis!.whiteAccuracy, analysis!.summary.white as unknown as Record<string, number>)}
           {renderSideSummary("Black", analysis!.blackAccuracy, analysis!.summary.black as unknown as Record<string, number>)}
         </div>
