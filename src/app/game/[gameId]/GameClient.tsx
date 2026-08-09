@@ -383,7 +383,6 @@ export default function GameClient() {
   const isMyTurn = Boolean(gameActive && myColor && game?.turn === myColor && !optimistic);
 
   const bestMoveArrows = useMemo(() => {
-    if (!gameOver) return undefined;
     const activePly = viewPly !== null ? viewPly : moves.length - 1;
     const arrows: Array<{ from: string; to: string; color: string }> = [];
     
@@ -920,9 +919,9 @@ export default function GameClient() {
                 <button
                   onClick={() => { setViewPly(-1); setOptimistic(null); }}
                   disabled={moves.length === 0}
-                  className="btn btn-secondary text-xs disabled:opacity-40 px-3"
+                  className="btn btn-secondary text-xs disabled:opacity-40 px-3 font-mono font-bold"
                 >
-                  First
+                  &lt;&lt;
                 </button>
                 <button
                   onClick={() => {
@@ -942,9 +941,9 @@ export default function GameClient() {
                     }
                   }}
                   disabled={displayMoves.length === 0}
-                  className="btn btn-secondary text-xs disabled:opacity-40 px-4"
+                  className="btn btn-secondary text-xs disabled:opacity-40 px-4 font-mono font-bold"
                 >
-                  Prev
+                  &lt;
                 </button>
                 <button
                   onClick={() => {
@@ -956,16 +955,16 @@ export default function GameClient() {
                     }
                   }}
                   disabled={Boolean((isLiveView && !optimistic) || (optimistic && optimistic.plies === optimistic.state.moveHistory.length))}
-                  className="btn btn-secondary text-xs disabled:opacity-40 px-4"
+                  className="btn btn-secondary text-xs disabled:opacity-40 px-4 font-mono font-bold"
                 >
-                  Next
+                  &gt;
                 </button>
                 <button
                   onClick={() => { setViewPly(null); setOptimistic(null); }}
                   disabled={isLiveView && !optimistic}
-                  className="btn btn-secondary text-xs disabled:opacity-40 px-3"
+                  className="btn btn-secondary text-xs disabled:opacity-40 px-3 font-mono font-bold"
                 >
-                  Last
+                  &gt;&gt;
                 </button>
               </div>
 
