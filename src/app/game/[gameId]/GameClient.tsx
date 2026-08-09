@@ -121,6 +121,7 @@ export default function GameClient() {
   const [analysis, setAnalysis] = useState<StockfishAnalysis | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [engineEnabled, setEngineEnabled] = useState(false);
   const [analysisDepth, setAnalysisDepth] = useState(20);
   const [fullGameAnalysis, setFullGameAnalysis] = useState<GameAnalysisResult | null>(null);
   const inFlight = useRef(false);
@@ -256,34 +257,36 @@ export default function GameClient() {
   const bestMoveArrow = useMemo(() => {
     const activePly = viewPly !== null ? viewPly : moves.length - 1;
     
-    // 1. Game Review takes precedence (green arrow)
+    // 1. Live Engine Analysis (blue arrow) takes precedence if enabled
+    if (engineEnabled) {
+      const liveMove = analysis?.bestMove || (analysis?.pv && analysis.pv[0]);
+      if (liveMove && liveMove.length >= 4) {
+        return {
+          from: liveMove.substring(0, 2),
+          to: liveMove.substring(2, 4),
+          color: "rgba(0, 128, 255, 0.7)", // blue
+        };
+      }
+    }
+
+    // 2. Game Review (green arrow)
     if (fullGameAnalysis && activePly + 1 < fullGameAnalysis.moves.length) {
       const bMove = fullGameAnalysis.moves[activePly + 1].bestMove;
       if (bMove && bMove.length >= 4) {
         return {
           from: bMove.substring(0, 2),
           to: bMove.substring(2, 4),
-          color: "rgba(102, 187, 106, 0.8)",
+          color: "rgba(102, 187, 106, 0.8)", // green
         };
       }
     }
 
-    // 2. Live Engine Analysis (blue arrow)
-    const liveMove = analysis?.bestMove || (analysis?.pv && analysis.pv[0]);
-    if (liveMove && liveMove.length >= 4) {
-      return {
-        from: liveMove.substring(0, 2),
-        to: liveMove.substring(2, 4),
-        color: "rgba(0, 128, 255, 0.7)",
-      };
-    }
-
     return null;
-  }, [fullGameAnalysis, analysis, viewPly, moves.length]);
+  }, [fullGameAnalysis, analysis, viewPly, moves.length, engineEnabled]);
 
   useEffect(() => {
     if (!game) return;
-    if (game.status === "playing") {
+    if (game.status === "playing" || !engineEnabled) {
       setAnalysis(null);
       setAnalysisError(null);
       return;
@@ -329,7 +332,7 @@ export default function GameClient() {
       clearTimeout(timeout);
       eventSource?.close();
     };
-  }, [displayFen, gameId, viewPly, analysisDepth]);
+  }, [displayFen, gameId, viewPly, analysisDepth, engineEnabled, game?.status]);
 
   const isLiveView = viewPly === null;
   const gameActive = game?.status === "playing";
@@ -791,7 +794,7 @@ export default function GameClient() {
             </div>
 
             {/* Right column */}
-            <div className="w-full lg:w-[260px] xl:w-[320px] shrink-0 flex flex-col gap-4 order-3 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto move-history">
+            <div className="w-full lg:w-[260px] xl:w-[320px] shrink-0 flex flex-col gap-4 order-3 lg:sticky lg:top-4 lg:self-start lg:h-[calc(100vh-2rem)] move-history">
               <MoveHistory
                 moves={displayMoves.map((m) => ({ san: m.san, check: m.check, checkmate: m.checkmate }))}
                 activeMoveIndex={optimistic?.plies != null ? optimistic.plies - 1 : (viewPly ?? moves.length - 1)}
@@ -803,41 +806,56 @@ export default function GameClient() {
                     setOptimistic(prev => prev ? { ...prev, plies: i + 1 } : null);
                   }
                 }}
+                className="flex-1 min-h-0"
               />
 
               {gameOver && moves.length > 0 && (
-                <GameAnalysis
-                  gameId={gameId}
-                  moves={displayMoves.map((m) => ({ san: m.san, check: m.check, checkmate: m.checkmate }))}
-                  onMoveClick={(ply) => { setViewPly(ply === displayMoves.length - 1 ? null : ply); setOptimistic(null); }}
-                  activePly={optimistic?.plies != null ? optimistic.plies - 1 : (viewPly ?? moves.length - 1)}
-                  onAnalysisComplete={setFullGameAnalysis}
-                  initialAnalysis={(game as any).analysis}
-                />
+                <div className="shrink-0 overflow-y-auto max-h-[30vh] card p-0 bg-transparent border-0">
+                  <GameAnalysis
+                    gameId={gameId}
+                    moves={displayMoves.map((m) => ({ san: m.san, check: m.check, checkmate: m.checkmate }))}
+                    onMoveClick={(ply) => { setViewPly(ply === displayMoves.length - 1 ? null : ply); setOptimistic(null); }}
+                    activePly={optimistic?.plies != null ? optimistic.plies - 1 : (viewPly ?? moves.length - 1)}
+                    onAnalysisComplete={setFullGameAnalysis}
+                    initialAnalysis={(game as any).analysis}
+                  />
+                </div>
               )}
 
-              <div className="card p-3">
+              <div className="card p-3 shrink-0">
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <h4 className="text-xs text-[var(--text-muted)] uppercase tracking-wider">
-                    Stockfish
-                  </h4>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-[var(--text-muted)]">
-                      {analysisLoading ? "Analyzing" : analysis?.depth ? `Depth ${analysis.depth}` : "Idle"}
-                    </span>
-                    {analysisDepth < 99 && (
-                      <button 
-                        onClick={() => setAnalysisDepth(d => Math.min(99, d + 10))}
-                        title="Increase depth by 10"
-                        className="flex items-center justify-center w-4 h-4 rounded bg-white/10 text-white hover:bg-[var(--accent)] transition-colors text-[10px]"
-                      >
-                        +
-                      </button>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs text-[var(--text-muted)] uppercase tracking-wider">
+                      Stockfish
+                    </h4>
+                    <button
+                      onClick={() => setEngineEnabled(!engineEnabled)}
+                      className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${engineEnabled ? 'bg-[var(--accent)]' : 'bg-[#333]'}`}
+                    >
+                      <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${engineEnabled ? 'translate-x-4' : 'translate-x-1'}`} />
+                    </button>
                   </div>
+                  {engineEnabled && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] text-[var(--text-muted)]">
+                        {analysisLoading ? "Analyzing" : analysis?.depth ? `Depth ${analysis.depth}` : "Idle"}
+                      </span>
+                      {analysisDepth < 99 && (
+                        <button 
+                          onClick={() => setAnalysisDepth(d => Math.min(99, d + 10))}
+                          title="Increase depth by 10"
+                          className="flex items-center justify-center w-4 h-4 rounded bg-white/10 text-white hover:bg-[var(--accent)] transition-colors text-[10px]"
+                        >
+                          +
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {analysisError ? (
+                {!engineEnabled ? (
+                  <p className="text-xs text-[var(--text-secondary)] py-1">Enable engine to see live evaluation and best moves.</p>
+                ) : analysisError ? (
                   <p className="text-sm text-[var(--text-secondary)]">{analysisError}</p>
                 ) : analysis ? (
                   <div className="space-y-3">
