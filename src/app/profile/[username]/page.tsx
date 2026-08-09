@@ -8,8 +8,8 @@ import { formatTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function ProfilePage({ params }: { params: { username: string } }) {
-  const { username } = params;
+export default async function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
+  const { username } = await params;
   const decodedUsername = decodeURIComponent(username);
 
   // Fetch user

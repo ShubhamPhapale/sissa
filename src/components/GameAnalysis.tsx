@@ -149,7 +149,7 @@ export default function GameAnalysis({
     const hoveredPoint = hoverPly !== null ? points[hoverPly] : null;
 
     return (
-      <div className="relative w-full overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-input)] group">
+      <div className="relative w-full rounded-xl border border-[var(--border)] bg-[var(--bg-input)] group">
         <svg 
           viewBox={`0 0 ${width} ${height}`} 
           className="w-full cursor-crosshair" 
@@ -458,7 +458,7 @@ function MoveTimesChart({ moves, activePly, onMoveClick }: { moves: Array<{ move
       <h4 className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] text-center mb-2">
         Move Times
       </h4>
-      <div className="relative w-full overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-input)]">
+      <div className="relative w-full rounded-xl border border-[var(--border)] bg-[var(--bg-input)]">
         <svg 
           viewBox={`0 0 ${width} ${height}`} 
           className="w-full cursor-crosshair" 

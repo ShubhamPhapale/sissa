@@ -70,10 +70,6 @@ export default function Home() {
   }, [inQueue, router]);
 
   const handlePlayFriend = async () => {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
     setCreating(true);
     setError(null);
     try {

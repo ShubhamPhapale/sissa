@@ -91,16 +91,17 @@ export async function GET(
       // Send initial data immediately
       await sendUpdate();
 
-      // Keep connection alive with periodic pings
-      const pingInterval = setInterval(() => {
+      // Keep connection alive and check for timeouts periodically
+      const pingInterval = setInterval(async () => {
         if (!isClosed) {
           try {
+            await sendUpdate();
             controller.enqueue(": ping\n\n");
           } catch {
             closeStream();
           }
         }
-      }, 15000);
+      }, 5000);
     },
     cancel() {
       cleanup();
