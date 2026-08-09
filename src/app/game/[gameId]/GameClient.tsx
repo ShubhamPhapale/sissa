@@ -38,16 +38,19 @@ interface ApiMove {
   checkmate: boolean;
   castle: string | null;
   enPassant: boolean;
+  createdAt?: string;
 }
 
 interface ApiGame {
   id: string;
+  whitePlayerId: number | null;
+  blackPlayerId: number | null;
   whitePlayerName: string | null;
   blackPlayerName: string | null;
-  status: string;
-  winner: string | null;
+  status: "waiting" | "playing" | "finished";
+  winner: "w" | "b" | "draw" | null;
   endReason: string | null;
-  drawOfferedBy: string | null;
+  drawOfferedBy: "w" | "b" | null;
   fen: string;
   pgn: string;
   timeControl: number;
@@ -56,6 +59,7 @@ interface ApiGame {
   blackTimeRemaining: number;
   turn: "w" | "b";
   serverTime: number;
+  createdAt?: string;
 }
 
 interface ApiPlayers {
@@ -128,14 +132,38 @@ export default function GameClient() {
   const mutationInFlight = useRef(false);
 
   const evalHeight = useMemo(() => {
-    if (!analysis || !analysis.scoreText) return "50%";
-    if (analysis.scoreText.startsWith("-#")) return "0%";
-    if (analysis.scoreText.startsWith("#")) return "100%";
-    const score = Number(analysis.scoreText);
-    if (!Number.isFinite(score)) return "50%";
-    // Scale where +10 is 100%, 0 is 50%, -10 is 0%.
-    return `${Math.max(0, Math.min(100, 50 + score * 5))}%`;
-  }, [analysis]);
+    // 1. Live Engine Analysis takes precedence
+    if (engineEnabled && analysis) {
+      if (analysis.scoreText.startsWith("-#")) return "0%";
+      if (analysis.scoreText.startsWith("#")) return "100%";
+      const score = Number(analysis.scoreText);
+      if (!Number.isFinite(score)) return "50%";
+      return `${Math.max(0, Math.min(100, 50 + score * 5))}%`;
+    }
+
+    // 2. Game Review (green arrow logic)
+    if (fullGameAnalysis) {
+      const activePly = viewPly !== null ? viewPly : moves.length - 1;
+      let cp = 0;
+      let isMate = false;
+
+      if (activePly === -1 && fullGameAnalysis.moves.length > 0) {
+        cp = fullGameAnalysis.moves[0].evalBefore;
+      } else if (activePly >= 0 && activePly < fullGameAnalysis.moves.length) {
+        cp = fullGameAnalysis.moves[activePly].evalAfter;
+        isMate = fullGameAnalysis.moves[activePly].isMate;
+      }
+
+      if (isMate) {
+        return cp > 0 ? "100%" : "0%";
+      }
+      
+      const score = cp / 100;
+      return `${Math.max(0, Math.min(100, 50 + score * 5))}%`;
+    }
+
+    return "50%";
+  }, [analysis, engineEnabled, fullGameAnalysis, viewPly, moves.length]);
 
   const applyPayload = useCallback(
     (payloadGame: ApiGame, payloadMoves?: ApiMove[], payloadPlayers?: ApiPlayers) => {
@@ -345,9 +373,15 @@ export default function GameClient() {
         san: m.san ?? "",
         check: m.check,
         checkmate: m.checkmate,
+        createdAt: undefined as string | undefined,
       }));
     }
-    return moves;
+    return moves.map(m => ({
+      san: m.san,
+      check: m.check,
+      checkmate: m.checkmate,
+      createdAt: m.createdAt,
+    }));
   }, [optimistic, moves]);
 
   const currentClassification = useMemo(() => {
@@ -813,7 +847,16 @@ export default function GameClient() {
                 <div className="shrink-0 overflow-y-auto max-h-[30vh] card p-0 bg-transparent border-0">
                   <GameAnalysis
                     gameId={gameId}
-                    moves={displayMoves.map((m) => ({ san: m.san, check: m.check, checkmate: m.checkmate }))}
+                    moves={displayMoves.map((m, i) => {
+                      let moveTime = 0;
+                      if (m.createdAt) {
+                        const prevTime = i === 0 && game?.createdAt 
+                          ? new Date(game.createdAt).getTime() 
+                          : (i > 0 && displayMoves[i-1].createdAt ? new Date(displayMoves[i-1].createdAt!).getTime() : new Date(m.createdAt).getTime());
+                        moveTime = Math.max(0, (new Date(m.createdAt).getTime() - prevTime) / 1000);
+                      }
+                      return { san: m.san, check: m.check, checkmate: m.checkmate, moveTime };
+                    })}
                     onMoveClick={(ply) => { setViewPly(ply === displayMoves.length - 1 ? null : ply); setOptimistic(null); }}
                     activePly={optimistic?.plies != null ? optimistic.plies - 1 : (viewPly ?? moves.length - 1)}
                     onAnalysisComplete={setFullGameAnalysis}

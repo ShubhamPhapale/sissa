@@ -10,7 +10,7 @@ import {
 
 interface GameAnalysisProps {
   gameId: string;
-  moves: Array<{ san: string; check?: boolean; checkmate?: boolean }>;
+  moves: Array<{ san: string; check?: boolean; checkmate?: boolean; moveTime?: number }>;
   onMoveClick?: (ply: number) => void;
   onAnalysisComplete?: (analysis: GameAnalysisResult) => void;
   activePly?: number;
@@ -36,6 +36,7 @@ export default function GameAnalysis({
   const [analysis, setAnalysis] = useState<GameAnalysisResult | null>(initialAnalysis || null);
   const [error, setError] = useState<string | null>(null);
   const [selectedMove, setSelectedMove] = useState<MoveClassification | null>(null);
+  const [activeTab, setActiveTab] = useState<"review" | "movetimes">("review");
 
   React.useEffect(() => {
     if (initialAnalysis) {
@@ -405,41 +406,99 @@ export default function GameAnalysis({
 
   // -- Analysis results --
   return (
-    <div className="card p-4 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-semibold">
+    <div className="card space-y-0">
+      {/* Header Tabs */}
+      <div className="flex border-b border-white/10 p-2 gap-2">
+        <button
+          onClick={() => setActiveTab("review")}
+          className={`flex-1 py-1.5 text-[11px] uppercase tracking-wider font-semibold rounded ${
+            activeTab === "review" ? "bg-white/10 text-white" : "text-[var(--text-muted)] hover:bg-white/5"
+          }`}
+        >
           Game Review
-        </h3>
-        <span className="text-[11px] text-[var(--text-muted)]">Depth 14</span>
+        </button>
+        <button
+          onClick={() => setActiveTab("movetimes")}
+          className={`flex-1 py-1.5 text-[11px] uppercase tracking-wider font-semibold rounded ${
+            activeTab === "movetimes" ? "bg-white/10 text-white" : "text-[var(--text-muted)] hover:bg-white/5"
+          }`}
+        >
+          Move Times
+        </button>
       </div>
 
-      {/* Accuracy rings */}
-      <div className="flex justify-center gap-8">
-        {renderAccuracyRing(analysis!.whiteAccuracy, "White", "♔")}
-        {renderAccuracyRing(analysis!.blackAccuracy, "Black", "♚")}
+      <div className="p-4 space-y-4">
+        {activeTab === "review" ? (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-[var(--text-muted)]">Stockfish Depth 14</span>
+            </div>
+
+            {/* Accuracy rings */}
+            <div className="flex justify-center gap-8">
+              {renderAccuracyRing(analysis!.whiteAccuracy, "White", "♔")}
+              {renderAccuracyRing(analysis!.blackAccuracy, "Black", "♚")}
+            </div>
+
+            {/* Classification summaries */}
+            <div className="flex gap-3">
+              {renderSideSummary("White", analysis!.summary.white as unknown as Record<string, number>)}
+              {renderSideSummary("Black", analysis!.summary.black as unknown as Record<string, number>)}
+            </div>
+
+            {/* Eval graph */}
+            {renderEvalGraph()}
+
+            {/* Move detail (when a move is selected) */}
+            {renderMoveDetail()}
+
+            {/* Annotated move list */}
+            <div>
+              <h4 className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] mb-2">
+                Annotated Moves
+              </h4>
+              {renderMoveList()}
+            </div>
+          </>
+        ) : (
+          <MoveTimesChart moves={moves} activePly={activePly} onMoveClick={onMoveClick} />
+        )}
       </div>
+    </div>
+  );
+}
 
-      {/* Classification summaries */}
-      <div className="flex gap-3">
-        {renderSideSummary("White", analysis!.summary.white as unknown as Record<string, number>)}
-        {renderSideSummary("Black", analysis!.summary.black as unknown as Record<string, number>)}
+function MoveTimesChart({ moves, activePly, onMoveClick }: { moves: Array<{ moveTime?: number }>, activePly?: number, onMoveClick?: (ply: number) => void }) {
+  if (moves.length === 0) return null;
+  const maxTime = Math.max(...moves.map(m => m.moveTime ?? 0), 1); // minimum 1 to avoid / 0
+
+  return (
+    <div className="flex flex-col gap-4 mt-2">
+      <h4 className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] text-center">
+        Move Times
+      </h4>
+      <div className="flex items-end h-[120px] gap-[2px] px-2" style={{ overflowX: "auto" }}>
+        {moves.map((m, i) => {
+          const t = m.moveTime ?? 0;
+          const pct = Math.max(2, (t / maxTime) * 100);
+          const isWhite = i % 2 === 0;
+          const isActive = activePly === i;
+          return (
+            <div
+              key={i}
+              className={`flex-1 min-w-[6px] rounded-t-sm transition-all duration-300 cursor-pointer ${
+                isActive ? "bg-[var(--accent)]" : isWhite ? "bg-white/70" : "bg-white/30"
+              } hover:opacity-80`}
+              style={{ height: `${pct}%` }}
+              title={`Ply ${i + 1}: ${t.toFixed(1)}s`}
+              onClick={() => onMoveClick?.(i)}
+            />
+          );
+        })}
       </div>
-
-      {/* Eval graph */}
-      {renderEvalGraph()}
-
-      {/* Move detail (when a move is selected) */}
-      {renderMoveDetail()}
-
-      {/* Annotated move list */}
-      <div>
-        <h4 className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] mb-2">
-          Annotated Moves
-        </h4>
-        {renderMoveList()}
+      <div className="text-center text-xs text-[var(--text-muted)]">
+        Max move time: {maxTime.toFixed(1)}s
       </div>
-
     </div>
   );
 }
