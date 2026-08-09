@@ -36,7 +36,6 @@ export default function GameAnalysis({
   const [analysis, setAnalysis] = useState<GameAnalysisResult | null>(initialAnalysis || null);
   const [error, setError] = useState<string | null>(null);
   const [selectedMove, setSelectedMove] = useState<MoveClassification | null>(null);
-  const [activeTab, setActiveTab] = useState<"review" | "movetimes">("review");
   const [hoverPly, setHoverPly] = useState<number | null>(null);
 
   React.useEffect(() => {
@@ -106,37 +105,40 @@ export default function GameAnalysis({
 
   // Classification badge row
   const renderClassificationRow = (type: string, count: number) => {
-    if (count === 0) return null;
     return (
       <div key={type} className="flex items-center justify-between py-1">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
           <span
             className="w-2.5 h-2.5 rounded-full shrink-0"
-            style={{ backgroundColor: CLASSIFICATION_COLORS[type] }}
+            style={{ backgroundColor: CLASSIFICATION_COLORS[type] || "#888" }}
           />
-          <span className="text-xs capitalize text-[var(--text-secondary)]">
+          <span className="text-[11px] capitalize text-[var(--text-secondary)] truncate">
             {CLASSIFICATION_ICONS[type]} {type}
           </span>
         </div>
-        <span className="text-xs font-semibold text-[var(--text-primary)] tabular-nums">
+        <span className="text-xs font-semibold text-[var(--text-primary)] tabular-nums ml-2 shrink-0">
           {count}
         </span>
       </div>
     );
   };
 
+  const CLASSIFICATION_ORDER = [
+    "brilliant", "great", "best", "excellent", 
+    "good", "book", "inaccuracy", "mistake", "blunder"
+  ];
+
   // Classification summary for one side
   const renderSideSummary = (title: string, counts: Record<string, number>) => {
-    const entries = Object.entries(counts).filter(([, count]) => count > 0);
-    if (entries.length === 0) return null;
-
     return (
-      <div className="flex-1 rounded-xl p-3 bg-[var(--bg-input)]">
-        <h4 className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] mb-2 text-center">
+      <div className="flex-1 rounded-xl p-3 bg-[var(--bg-input)] overflow-hidden">
+        <h4 className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] mb-2 text-center truncate">
           {title}
         </h4>
-        <div className="space-y-0.5">
-          {entries.map(([type, count]) => renderClassificationRow(type, count))}
+        <div className="flex flex-col gap-0.5">
+          {CLASSIFICATION_ORDER.map((type) => 
+            renderClassificationRow(type, counts[type] || 0)
+          )}
         </div>
       </div>
     );
@@ -392,97 +394,114 @@ export default function GameAnalysis({
   // -- Analysis results --
   return (
     <div className="card space-y-0">
-      {/* Header Tabs */}
-      <div className="flex border-b border-white/10 p-2 gap-2">
-        <button
-          onClick={() => setActiveTab("review")}
-          className={`flex-1 py-1.5 text-[11px] uppercase tracking-wider font-semibold rounded ${
-            activeTab === "review" ? "bg-white/10 text-white" : "text-[var(--text-muted)] hover:bg-white/5"
-          }`}
-        >
-          Game Review
-        </button>
-        <button
-          onClick={() => setActiveTab("movetimes")}
-          className={`flex-1 py-1.5 text-[11px] uppercase tracking-wider font-semibold rounded ${
-            activeTab === "movetimes" ? "bg-white/10 text-white" : "text-[var(--text-muted)] hover:bg-white/5"
-          }`}
-        >
-          Move Times
-        </button>
-      </div>
-
+      {/* No tabs, render stacked */}
       <div className="p-4 space-y-4">
-        {activeTab === "review" ? (
-          <>
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] text-[var(--text-muted)]">Stockfish Depth 14</span>
-            </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] text-[var(--text-muted)]">Stockfish Depth 14</span>
+        </div>
 
-            {/* Accuracy rings */}
-            <div className="flex justify-center gap-8">
-              {renderAccuracyRing(analysis!.whiteAccuracy, "White", "♔")}
-              {renderAccuracyRing(analysis!.blackAccuracy, "Black", "♚")}
-            </div>
+        {/* Accuracy rings */}
+        <div className="flex justify-center gap-8">
+          {renderAccuracyRing(analysis!.whiteAccuracy, "White", "♔")}
+          {renderAccuracyRing(analysis!.blackAccuracy, "Black", "♚")}
+        </div>
 
-            {/* Classification summaries */}
-            <div className="flex gap-3">
-              {renderSideSummary("White", analysis!.summary.white as unknown as Record<string, number>)}
-              {renderSideSummary("Black", analysis!.summary.black as unknown as Record<string, number>)}
-            </div>
+        {/* Classification summaries */}
+        <div className="flex gap-3">
+          {renderSideSummary("White", analysis!.summary.white as unknown as Record<string, number>)}
+          {renderSideSummary("Black", analysis!.summary.black as unknown as Record<string, number>)}
+        </div>
 
-            {/* Eval graph */}
-            {renderEvalGraph()}
+        {/* Eval graph */}
+        {renderEvalGraph()}
 
-            {/* Move detail (when a move is selected) */}
-            {renderMoveDetail()}
+        {/* Move Times graph */}
+        <MoveTimesChart moves={moves} activePly={activePly} onMoveClick={onMoveClick} />
 
-            {/* Annotated move list */}
-            <div>
-              <h4 className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] mb-2">
-                Annotated Moves
-              </h4>
-              {renderMoveList()}
-            </div>
-          </>
-        ) : (
-          <MoveTimesChart moves={moves} activePly={activePly} onMoveClick={onMoveClick} />
-        )}
+        {/* Move detail (when a move is selected) */}
+        {renderMoveDetail()}
+
+        {/* Annotated move list */}
+        <div>
+          <h4 className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] mb-2 mt-4">
+            Annotated Moves
+          </h4>
+          {renderMoveList()}
+        </div>
       </div>
     </div>
   );
 }
 
 function MoveTimesChart({ moves, activePly, onMoveClick }: { moves: Array<{ moveTime?: number }>, activePly?: number, onMoveClick?: (ply: number) => void }) {
+  const [hoverPly, setHoverPly] = React.useState<number | null>(null);
+  
   if (moves.length === 0) return null;
-  const maxTime = Math.max(...moves.map(m => m.moveTime ?? 0), 1); // minimum 1 to avoid / 0
+  const times = moves.map(m => m.moveTime ?? 0);
+  const maxTime = Math.max(...times, 1);
+  const width = 1000;
+  const height = 120;
+  
+  const getX = (i: number) => (i / Math.max(1, moves.length - 1)) * width;
+  const getY = (t: number) => height - (t / maxTime) * height;
+
+  const points = times.map((t, i) => ({ x: getX(i), y: getY(t), time: t, ply: i }));
+  const lineD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+  const fillD = `M 0 ${height} ` + points.map((p) => `L ${p.x} ${p.y}`).join(" ") + ` L ${width} ${height} Z`;
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const ratio = x / rect.width;
+    const ply = Math.round(ratio * Math.max(1, moves.length - 1));
+    setHoverPly(Math.max(0, Math.min(moves.length - 1, ply)));
+  };
+
+  const hoveredPoint = hoverPly !== null ? points[hoverPly] : null;
 
   return (
-    <div className="flex flex-col gap-4 mt-2">
-      <h4 className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] text-center">
-        Move Times
-      </h4>
-      <div className="flex items-end h-[120px] gap-[2px] px-2" style={{ overflowX: "auto" }}>
-        {moves.map((m, i) => {
-          const t = m.moveTime ?? 0;
-          const pct = Math.max(2, (t / maxTime) * 100);
-          const isWhite = i % 2 === 0;
-          const isActive = activePly === i;
-          return (
-            <div
-              key={i}
-              className={`flex-1 min-w-[6px] rounded-t-sm transition-all duration-300 cursor-pointer ${
-                isActive ? "bg-[var(--accent)]" : isWhite ? "bg-white/70" : "bg-white/30"
-              } hover:opacity-80`}
-              style={{ height: `${pct}%` }}
-              title={`Ply ${i + 1}: ${t.toFixed(1)}s`}
-              onClick={() => onMoveClick?.(i)}
-            />
-          );
-        })}
-      </div>
-      <div className="text-center text-xs text-[var(--text-muted)]">
-        Max move time: {maxTime.toFixed(1)}s
+    <div className="flex flex-col gap-2 mt-4 group relative">
+      <div className="relative w-full overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-input)]">
+        <svg 
+          viewBox={`0 0 ${width} ${height}`} 
+          className="w-full cursor-crosshair" 
+          preserveAspectRatio="none" 
+          style={{ height: 120 }}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={() => setHoverPly(null)}
+          onClick={() => hoverPly !== null && onMoveClick?.(hoverPly)}
+        >
+          <path d={fillD} fill="rgba(255,152,0,0.15)" />
+          <path d={lineD} fill="none" stroke="#ff9800" strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
+          
+          {/* Reference lines */}
+          {[1, 5, 10, 30].filter(t => t < maxTime).map(t => {
+            const y = getY(t);
+            return (
+              <g key={t}>
+                <line x1="0" y1={y} x2={width} y2={y} stroke="rgba(255,255,255,0.1)" strokeWidth="1" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
+                <text x="5" y={y - 4} fill="rgba(255,255,255,0.4)" fontSize="10" fontFamily="sans-serif">{t}s</text>
+              </g>
+            );
+          })}
+
+          {activePly !== undefined && activePly >= 0 && activePly < points.length && (
+            <line x1={points[activePly].x} y1="0" x2={points[activePly].x} y2={height} stroke="var(--accent)" strokeWidth="1.5" strokeOpacity="0.6" vectorEffect="non-scaling-stroke" />
+          )}
+
+          {hoveredPoint && (
+            <line x1={hoveredPoint.x} y1="0" x2={hoveredPoint.x} y2={height} stroke="white" strokeWidth="1" strokeOpacity="0.8" strokeDasharray="4 2" vectorEffect="non-scaling-stroke" />
+          )}
+        </svg>
+
+        {hoveredPoint && (
+          <div 
+            className="absolute top-2 px-2 py-1 bg-[#1a1a1a] text-white text-[10px] rounded shadow-lg pointer-events-none transform -translate-x-1/2"
+            style={{ left: `${(hoveredPoint.ply / Math.max(1, moves.length - 1)) * 100}%` }}
+          >
+            {hoveredPoint.time.toFixed(1)}s
+          </div>
+        )}
       </div>
     </div>
   );

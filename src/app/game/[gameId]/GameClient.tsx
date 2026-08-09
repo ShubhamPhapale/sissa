@@ -111,7 +111,7 @@ export default function GameClient() {
   const gameId = routeParams?.gameId ?? "";
 
   const playerParam = searchParams.get("player");
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
 
   const [game, setGame] = useState<ApiGame | null>(null);
 
@@ -349,6 +349,17 @@ export default function GameClient() {
   const isLiveView = viewPly === null;
   const gameActive = game?.status === "playing";
   const gameOver = game?.status === "finished";
+
+  useEffect(() => {
+    if (gameOver && user) {
+      fetch("/api/auth/me")
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.user) setUser(d.user);
+        });
+    }
+  }, [gameOver, user?.id, setUser]);
+
   const isMyTurn = Boolean(gameActive && myColor && game?.turn === myColor && !optimistic);
 
   const bestMoveArrow = useMemo(() => {
@@ -423,7 +434,7 @@ export default function GameClient() {
         setAnalysisLoading(false);
         eventSource?.close();
       };
-    }, 300);
+    }, 600);
 
     return () => {
       cancelled = true;
@@ -912,28 +923,6 @@ export default function GameClient() {
                 className="flex-1 min-h-0"
               />
 
-              {gameOver && moves.length > 0 && (
-                <div className="shrink-0 overflow-y-auto max-h-[30vh] card p-0 bg-transparent border-0">
-                  <GameAnalysis
-                    gameId={gameId}
-                    moves={displayMoves.map((m, i) => {
-                      let moveTime = 0;
-                      if (m.createdAt) {
-                        const prevTime = i === 0 && game?.createdAt 
-                          ? new Date(game.createdAt).getTime() 
-                          : (i > 0 && displayMoves[i-1].createdAt ? new Date(displayMoves[i-1].createdAt!).getTime() : new Date(m.createdAt).getTime());
-                        moveTime = Math.max(0, (new Date(m.createdAt).getTime() - prevTime) / 1000);
-                      }
-                      return { san: m.san, check: m.check, checkmate: m.checkmate, moveTime };
-                    })}
-                    onMoveClick={(ply) => { setViewPly(ply === displayMoves.length - 1 ? null : ply); setOptimistic(null); }}
-                    activePly={optimistic?.plies != null ? optimistic.plies - 1 : (viewPly ?? moves.length - 1)}
-                    onAnalysisComplete={setFullGameAnalysis}
-                    initialAnalysis={(game as any).analysis}
-                  />
-                </div>
-              )}
-
               {gameOver && (
                 <div className="card p-3 shrink-0">
                   <div className="flex items-center justify-between gap-2 mb-2">
@@ -1042,6 +1031,28 @@ export default function GameClient() {
               )}
             </div>
           </div>
+
+          {gameOver && moves.length > 0 && (
+            <div className="mt-12 w-full max-w-4xl mx-auto pb-12">
+              <GameAnalysis
+                gameId={gameId}
+                moves={displayMoves.map((m, i) => {
+                  let moveTime = 0;
+                  if (m.createdAt) {
+                    const prevTime = i === 0 && game?.createdAt 
+                      ? new Date(game.createdAt).getTime() 
+                      : (i > 0 && displayMoves[i-1].createdAt ? new Date(displayMoves[i-1].createdAt!).getTime() : new Date(m.createdAt).getTime());
+                    moveTime = Math.max(0, (new Date(m.createdAt).getTime() - prevTime) / 1000);
+                  }
+                  return { san: m.san, check: m.check, checkmate: m.checkmate, moveTime };
+                })}
+                onMoveClick={(ply) => { setViewPly(ply === displayMoves.length - 1 ? null : ply); setOptimistic(null); }}
+                activePly={optimistic?.plies != null ? optimistic.plies - 1 : (viewPly ?? moves.length - 1)}
+                onAnalysisComplete={setFullGameAnalysis}
+                initialAnalysis={(game as any).analysis}
+              />
+            </div>
+          )}
         </div>
       </main>
     </div>
