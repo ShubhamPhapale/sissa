@@ -133,28 +133,47 @@ export default function GameClient() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   
-  const [replaySpeed, setReplaySpeed] = useState<number | null>(null);
+  const [replayMode, setReplayMode] = useState<"fast" | "slow" | "realtime" | null>(null);
   const [viewPly, setViewPly] = useState<number | null>(null);
 
   useEffect(() => {
-    if (replaySpeed === null) return;
-    const interval = setInterval(() => {
+    if (!replayMode) return;
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const playNext = () => {
       setViewPly((p) => {
         const cur = p === null ? moves.length - 1 : p;
         if (cur + 1 >= moves.length - 1) {
+          setReplayMode(null); // End of game reached
           return null;
         }
+
+        let delay = 1000;
+        if (replayMode === "fast") delay = 500;
+        if (replayMode === "slow") delay = 1500;
+        if (replayMode === "realtime") {
+          const nextMove = moves[cur + 1];
+          const prevMoveTime = cur >= 0 ? new Date(moves[cur].createdAt!).getTime() : new Date(game?.createdAt || Date.now()).getTime();
+          const nextMoveTime = new Date(nextMove.createdAt!).getTime();
+          delay = Math.min(5000, Math.max(200, nextMoveTime - prevMoveTime)); // Cap between 200ms and 5s
+        }
+
+        timeoutId = setTimeout(playNext, delay);
         return cur + 1;
       });
-    }, replaySpeed);
-    return () => clearInterval(interval);
-  }, [replaySpeed, moves.length]);
+    };
+
+    // Initial kick-off delay
+    timeoutId = setTimeout(playNext, replayMode === "fast" ? 500 : 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [replayMode, moves, game?.createdAt]);
 
   useEffect(() => {
-    if (replaySpeed !== null && viewPly === null) {
-      setReplaySpeed(null);
+    if (replayMode !== null && viewPly === null) {
+      setReplayMode(null);
     }
-  }, [viewPly, replaySpeed]);
+  }, [viewPly, replayMode]);
 
   const [boardFlipped, setBoardFlipped] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -908,20 +927,36 @@ export default function GameClient() {
               </div>
 
               {gameOver && moves.length > 0 && (
-                <div className="flex items-center justify-center gap-2">
-                  <button
-                    onClick={() => {
-                      if (replaySpeed !== null) {
-                        setReplaySpeed(null);
-                      } else {
-                        if (viewPly === null) setViewPly(0);
-                        setReplaySpeed(1000);
-                      }
-                    }}
-                    className={`btn text-xs px-4 ${replaySpeed !== null ? 'bg-[var(--accent)] text-white border-transparent' : 'btn-secondary'}`}
-                  >
-                    {replaySpeed !== null ? "⏸ Pause Replay" : "▶ Auto Replay"}
-                  </button>
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  {replayMode !== null ? (
+                    <button
+                      onClick={() => setReplayMode(null)}
+                      className="btn text-xs px-4 bg-[var(--accent)] text-white border-transparent"
+                    >
+                      ⏸ Pause Replay ({replayMode})
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => { if (viewPly === null) setViewPly(-1); setReplayMode("fast"); }}
+                        className="btn btn-secondary text-xs px-3"
+                      >
+                        ▶ Fast
+                      </button>
+                      <button
+                        onClick={() => { if (viewPly === null) setViewPly(-1); setReplayMode("slow"); }}
+                        className="btn btn-secondary text-xs px-3"
+                      >
+                        ▶ Slow
+                      </button>
+                      <button
+                        onClick={() => { if (viewPly === null) setViewPly(-1); setReplayMode("realtime"); }}
+                        className="btn btn-secondary text-xs px-3"
+                      >
+                        ▶ Realtime
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>

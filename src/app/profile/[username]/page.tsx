@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { users, games } from "@/db/schema";
-import { eq, or, desc } from "drizzle-orm";
+import { eq, or, desc, ilike } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import Link from "next/link";
@@ -12,8 +12,8 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const { username } = await params;
   const decodedUsername = decodeURIComponent(username);
 
-  // Fetch user
-  const userResults = await db.select().from(users).where(eq(users.username, decodedUsername)).limit(1);
+  // Fetch user (case-insensitive)
+  const userResults = await db.select().from(users).where(ilike(users.username, decodedUsername)).limit(1);
   if (userResults.length === 0) {
     return notFound();
   }
