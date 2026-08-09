@@ -10,7 +10,8 @@ type Action =
   | "offer-draw"
   | "accept-draw"
   | "decline-draw"
-  | "claim-timeout";
+  | "claim-timeout"
+  | "abort";
 
 /**
  * Game actions that are not moves. Every result-changing action is validated
@@ -48,6 +49,21 @@ export async function POST(
     }
 
     switch (action) {
+      case "abort": {
+        // Abort is only allowed if no moves have been made yet (fen is startpos)
+        if (game.fen !== "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") {
+          return NextResponse.json({ error: "Game has already started" }, { status: 400 });
+        }
+        // When aborted, the game is a draw with reason "aborted"
+        // Alternatively, we could just delete it, or mark it as aborted so ratings don't update.
+        // Actually, finalizeGame handles 'draw', but we probably don't want ratings to change on an abort.
+        // Let's set endReason to 'aborted' but winner to null/draw? 
+        // If we set winner to 'draw' with endReason 'aborted', we can skip ELO updates in finalizeGame.
+        const finished = await finalizeGame(gameId, "draw", "aborted");
+        await notifyGameUpdate(gameId);
+        return NextResponse.json({ game: serializeGame(finished ?? game) });
+      }
+
       case "resign": {
         // A player may only resign on their own behalf.
         const winner = color === "w" ? "b" : "w";

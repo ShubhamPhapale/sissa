@@ -262,42 +262,35 @@ export default function Home() {
                 <p className="mb-5 text-sm text-[var(--text-secondary)]">
                   Choose a time control and find a match or invite a friend.
                 </p>
-
-                <label className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">
-                  Time control
+                <label className="block text-sm font-medium mb-3 text-[var(--text-secondary)]">
+                  Time Control
                 </label>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 mb-4">
-                  {TIME_CONTROLS.map((tc) => (
+                <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
+                  {[
+                    { label: "1 + 0", name: "Bullet", time: 60, inc: 0 },
+                    { label: "2 + 1", name: "Bullet", time: 120, inc: 1 },
+                    { label: "3 + 0", name: "Blitz", time: 180, inc: 0 },
+                    { label: "3 + 2", name: "Blitz", time: 180, inc: 2 },
+                    { label: "5 + 0", name: "Blitz", time: 300, inc: 0 },
+                    { label: "5 + 3", name: "Blitz", time: 300, inc: 3 },
+                    { label: "10 + 0", name: "Rapid", time: 600, inc: 0 },
+                    { label: "15 + 10", name: "Rapid", time: 900, inc: 10 },
+                    { label: "30 + 0", name: "Classical", time: 1800, inc: 0 },
+                  ].map((preset) => (
                     <button
-                      key={tc.seconds}
-                      onClick={() => setSelectedTime(tc.seconds)}
-                      className={`min-h-[84px] rounded-2xl px-3 py-4 text-sm font-medium transition-all ${
-                        selectedTime === tc.seconds
-                          ? "bg-[var(--accent)] text-white shadow-lg shadow-orange-500/20"
-                          : "bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--border)]"
+                      key={`${preset.time}+${preset.inc}`}
+                      onClick={() => {
+                        setSelectedTime(preset.time);
+                        setIncrement(preset.inc);
+                      }}
+                      className={`flex flex-col items-center justify-center min-h-[72px] rounded-xl p-2 transition-all border ${
+                        selectedTime === preset.time && increment === preset.inc
+                          ? "bg-[var(--accent)] border-transparent text-white shadow-lg shadow-orange-500/20 scale-105 z-10"
+                          : "bg-[var(--bg-input)] border-transparent text-[var(--text-secondary)] hover:bg-[var(--border)]"
                       }`}
                     >
-                      <div className="text-base font-semibold">{tc.label}</div>
-                      <div className="mt-1 text-xs opacity-75">{formatTime(tc.seconds)}</div>
-                    </button>
-                  ))}
-                </div>
-
-                <label className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">
-                  Increment per move
-                </label>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-6">
-                  {[0, 2, 5, 10].map((inc) => (
-                    <button
-                      key={inc}
-                      onClick={() => setIncrement(inc)}
-                      className={`min-h-[56px] rounded-lg px-3 py-3 text-sm font-medium transition-all ${
-                        increment === inc
-                          ? "bg-[var(--accent)] text-white"
-                          : "bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--border)]"
-                      }`}
-                    >
-                      +{inc}s
+                      <div className="text-sm sm:text-base font-bold tracking-tight">{preset.label}</div>
+                      <div className="text-[10px] sm:text-xs opacity-80 uppercase tracking-widest mt-0.5">{preset.name}</div>
                     </button>
                   ))}
                 </div>

@@ -10,6 +10,7 @@ import MoveHistory from "@/components/MoveHistory";
 import GameControls from "@/components/GameControls";
 import GameOverDialog from "@/components/GameOverDialog";
 import GameAnalysis from "@/components/GameAnalysis";
+import { useAuth } from "@/components/AuthProvider";
 import type { GameAnalysisResult } from "@/lib/game-analysis-types";
 import {
   createInitialState,
@@ -93,18 +94,47 @@ export default function GameClient() {
   const router = useRouter();
   const routeParams = useParams<{ gameId: string }>();
   const searchParams = useSearchParams();
+
   const gameId = routeParams?.gameId ?? "";
 
   const playerParam = searchParams.get("player");
-  const myColor: "w" | "b" | null =
-    playerParam === "1" || playerParam === "w" ? "w" : playerParam === "2" || playerParam === "b" ? "b" : null;
-  const isSpectator = myColor === null;
+  const { user } = useAuth();
 
   const [game, setGame] = useState<ApiGame | null>(null);
+
+  const myColor: "w" | "b" | null = useMemo(() => {
+    if (user && game) {
+      if (game.whitePlayerId === user.id) return "w";
+      if (game.blackPlayerId === user.id) return "b";
+    }
+    if (playerParam === "1" || playerParam === "w") return "w";
+    if (playerParam === "2" || playerParam === "b") return "b";
+    return null;
+  }, [user, game, playerParam]);
+  
+  const isSpectator = myColor === null;
+
   const [players, setPlayers] = useState<ApiPlayers>({ white: null, black: null });
   const [moves, setMoves] = useState<ApiMove[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  
+  const [replaySpeed, setReplaySpeed] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (replaySpeed === null) return;
+    const interval = setInterval(() => {
+      setViewPly((p) => {
+        const cur = p === null ? moves.length - 1 : p;
+        if (cur + 1 >= moves.length - 1) {
+          setReplaySpeed(null);
+          return null;
+        }
+        return cur + 1;
+      });
+    }, replaySpeed);
+    return () => clearInterval(interval);
+  }, [replaySpeed, moves.length]);
   const [boardFlipped, setBoardFlipped] = useState(false);
   const [viewPly, setViewPly] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -704,6 +734,8 @@ export default function GameClient() {
                 onAcceptDraw={() => doAction("accept-draw")}
                 onDeclineDraw={() => doAction("decline-draw")}
                 onFlipBoard={() => setBoardFlipped((f) => !f)}
+                onAbort={() => doAction("abort")}
+                canAbort={game?.fen === "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"}
                 isPlayerTurn={isMyTurn}
                 isSpectator={isSpectator}
                 gameActive={Boolean(gameActive)}

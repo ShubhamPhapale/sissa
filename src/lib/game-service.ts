@@ -23,9 +23,25 @@ export const MAX_TIME_CONTROL = 10800;
  */
 export function elapsedSecondsFor(game: GameRow): number {
   if (game.status !== "playing") return 0;
+  
+  // If lastMoveAt is present, it's not the very first move.
   const since = game.lastMoveAt ?? game.createdAt;
   if (!since) return 0;
-  const ms = Date.now() - new Date(since).getTime();
+  
+  let ms = Date.now() - new Date(since).getTime();
+  
+  // Grace period before clock starts running down for the first move
+  if (!game.lastMoveAt) {
+    const estimatedDuration = game.timeControl + 40 * game.increment;
+    let graceMs = 0;
+    if (estimatedDuration < 180) graceMs = 0; // bullet
+    else if (estimatedDuration < 480) graceMs = 5000; // blitz
+    else if (estimatedDuration < 1500) graceMs = 10000; // rapid
+    else graceMs = 15000; // classical
+
+    ms = Math.max(0, ms - graceMs);
+  }
+
   return Math.max(0, Math.floor(ms / 1000));
 }
 
@@ -98,23 +114,24 @@ export async function finalizeGame(
     return existing ?? null;
   }
 
-  if (updated.whitePlayerId && updated.blackPlayerId && updated.whitePlayerId !== updated.blackPlayerId) {
+  if (updated.whitePlayerId && updated.blackPlayerId && updated.whitePlayerId !== updated.blackPlayerId && endReason !== "aborted") {
     const [white] = await db.select().from(users).where(eq(users.id, updated.whitePlayerId));
     const [black] = await db.select().from(users).where(eq(users.id, updated.blackPlayerId));
     if (white && black) {
       // Classify game type
       const estimatedDuration = updated.timeControl + 40 * updated.increment;
-      let ratingType: "bulletRating" | "blitzRating" | "rapidRating" | "classicalRating" = "blitzRating";
-      if (estimatedDuration < 180) ratingType = "bulletRating";
-      else if (estimatedDuration < 600) ratingType = "blitzRating";
-      else if (estimatedDuration < 1800) ratingType = "rapidRating";
-      else ratingType = "classicalRating";
+      let ratingType: "bullet" | "blitz" | "rapid" | "classical" = "classical";
+      if (estimatedDuration < 180) ratingType = "bullet";
+      else if (estimatedDuration < 480) ratingType = "blitz";
+      else if (estimatedDuration < 1500) ratingType = "rapid";
 
-      const next = eloUpdate(white[ratingType], black[ratingType], winner);
+      const ratingKey = (ratingType + "Rating") as "bulletRating" | "blitzRating" | "rapidRating" | "classicalRating";
+
+      const next = eloUpdate(white[ratingKey], black[ratingKey], winner);
       await db
         .update(users)
         .set({
-          [ratingType]: next.white,
+          [ratingKey]: next.white,
           rating: next.white,
           wins: white.wins + (winner === "w" ? 1 : 0),
           losses: white.losses + (winner === "b" ? 1 : 0),

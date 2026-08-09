@@ -8,6 +8,8 @@ interface GameControlsProps {
   onAcceptDraw: () => void;
   onDeclineDraw: () => void;
   onFlipBoard: () => void;
+  onAbort?: () => void;
+  canAbort?: boolean;
   isPlayerTurn: boolean;
   isSpectator: boolean;
   gameActive: boolean;
@@ -23,6 +25,8 @@ export default function GameControls({
   onAcceptDraw,
   onDeclineDraw,
   onFlipBoard,
+  onAbort,
+  canAbort,
   isPlayerTurn,
   isSpectator,
   gameActive,
@@ -54,27 +58,39 @@ export default function GameControls({
 
         {!isSpectator && gameActive && (
           <>
-            <button
-              onClick={onOfferDraw}
-              disabled={busy || offerFromMe}
-              className="btn btn-secondary text-sm disabled:opacity-50"
-            >
-              {offerFromMe ? "Offered" : "Draw"}
-            </button>
-            <button
-              onClick={() => {
-                if (confirmResign) {
-                  onResign();
-                  setConfirmResign(false);
-                } else {
-                  setConfirmResign(true);
-                }
-              }}
-              disabled={busy}
-              className={`btn text-sm ${confirmResign ? "btn-danger" : "btn-secondary"}`}
-            >
-              {confirmResign ? "Sure?" : "Resign"}
-            </button>
+            {canAbort ? (
+              <button
+                onClick={onAbort}
+                disabled={busy}
+                className="btn btn-danger text-sm col-span-2"
+              >
+                Abort Game
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={onOfferDraw}
+                  disabled={busy || offerFromMe}
+                  className="btn btn-secondary text-sm disabled:opacity-50"
+                >
+                  {offerFromMe ? "Offered" : "Draw"}
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirmResign) {
+                      onResign();
+                      setConfirmResign(false);
+                    } else {
+                      setConfirmResign(true);
+                    }
+                  }}
+                  disabled={busy}
+                  className={`btn text-sm ${confirmResign ? "btn-danger" : "btn-secondary"}`}
+                >
+                  {confirmResign ? "Sure?" : "Resign"}
+                </button>
+              </>
+            )}
           </>
         )}
       </div>

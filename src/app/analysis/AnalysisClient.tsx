@@ -185,7 +185,7 @@ export default function AnalysisClient() {
               <div className="flex-1 min-w-0">
                 <ChessBoard
                   gameState={displayState}
-                  playerColor={boardFlipped ? "b" : "w"}
+                  playerColor="w"
                   onMove={handleMove}
                   lastMove={lastMove}
                   boardFlipped={boardFlipped}
