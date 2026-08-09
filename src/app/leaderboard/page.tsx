@@ -5,7 +5,7 @@ import { users } from "@/db/schema";
 import { desc, not, like } from "drizzle-orm";
 import LeaderboardClient from "./LeaderboardClient";
 
-export const revalidate = 60; // Revalidate every 60 seconds
+export const dynamic = "force-dynamic";
 
 export default async function LeaderboardPage() {
   const [bullet, blitz, rapid, classical] = await Promise.all([
