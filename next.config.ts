@@ -5,9 +5,6 @@ const nextConfig: NextConfig = {
 		root: __dirname,
 	},
 	serverExternalPackages: ["stockfish"],
-	eslint: {
-		ignoreDuringBuilds: true,
-	},
 };
 
 export default nextConfig;
