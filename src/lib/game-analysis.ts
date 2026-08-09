@@ -108,12 +108,17 @@ export async function analyzeGame(
   // Analyze the starting position to get the initial eval.
   let previousEval = 0;
   let previousIsMate = false;
+  let previousBestMove: string | null = null;
+  let previousBestMoveSan: string | null = null;
+  
   try {
     const initial = await analyzePosition(currentFen, 12);
     if (initial) {
       const parsed = parseScoreText(initial.scoreText);
       previousEval = parsed.cp;
       previousIsMate = parsed.isMate;
+      previousBestMove = initial.bestMove ?? null;
+      previousBestMoveSan = initial.bestMoveSan ?? null;
     }
   } catch {
     // Engine failed on starting position — use 0.
@@ -128,6 +133,8 @@ export async function analyzeGame(
       const isWhite = i % 2 === 0;
       const fenBeforeMove = currentFen;
       const evalBefore = previousEval;
+      const bestMoveForThisTurn = previousBestMove;
+      const bestMoveSanForThisTurn = previousBestMoveSan;
 
       // Apply the move to get the next position.
       const nextState = applyMoveFromRecord(state, move);
@@ -141,9 +148,9 @@ export async function analyzeGame(
 
       // Analyze the position AFTER the move.
       let evalAfter = previousEval;
-      let bestMoveSan: string | null = null;
-      let bestEval = previousEval;
       let afterIsMate = previousIsMate;
+      let nextBestMove: string | null = null;
+      let nextBestMoveSan: string | null = null;
 
       try {
         const result = await analyzePosition(currentFen, 12);
@@ -151,8 +158,8 @@ export async function analyzeGame(
           const parsed = parseScoreText(result.scoreText);
           evalAfter = parsed.cp;
           afterIsMate = parsed.isMate;
-          bestMoveSan = result.bestMoveSan ?? result.bestMove ?? null;
-          bestEval = evalAfter;
+          nextBestMove = result.bestMove ?? null;
+          nextBestMoveSan = result.bestMoveSan ?? null;
         }
       } catch {
         // Use previous eval on failure.
@@ -185,34 +192,40 @@ export async function analyzeGame(
         classification = "best";
       }
 
-      const moveAcc = getMoveAccuracy(evalBefore, evalAfter, isWhite);
+      const winProbBefore = evalToWinProb(isWhite ? evalBefore : -evalBefore);
+      const winProbAfter = evalToWinProb(isWhite ? evalAfter : -evalAfter);
+      let acc = 100 - (Math.max(0, winProbBefore - winProbAfter) * 100);
+      acc = Math.max(0, Math.min(100, acc));
 
-      // Track loss totals for accuracy.
-      if (isWhite) {
-        summary.white[classification]++;
-        whiteAccTotal += moveAcc;
-      } else {
-        summary.black[classification]++;
-        blackAccTotal += moveAcc;
-      }
+      if (isWhite) whiteAccTotal += acc;
+      else blackAccTotal += acc;
+
+      if (isWhite) summary.white[classification]++;
+      else summary.black[classification]++;
 
       classifications.push({
         ply: i,
-        san: move.san,
-        fen: fenBeforeMove,
+        san: move.san || "",
+        fenBefore: fenBeforeMove,
+        fenAfter: currentFen,
+        classification,
         evalBefore,
         evalAfter,
-        bestMove: bestMoveSan,
-        bestEval,
-        cpLoss,
-        classification,
-        isMate: afterIsMate || previousIsMate,
+        isMate: afterIsMate,
+        accuracy: Math.round(acc * 10) / 10,
+        bestMove: bestMoveForThisTurn ?? undefined,
+        bestMoveSan: bestMoveSanForThisTurn ?? undefined,
       });
 
+      // Update for next iteration
       previousEval = evalAfter;
       previousIsMate = afterIsMate;
+      previousBestMove = nextBestMove;
+      previousBestMoveSan = nextBestMoveSan;
 
-      onProgress?.(i + 1, moveList.length);
+      if (onProgress) {
+        onProgress(i + 1, moveList.length);
+      }
     }
   } finally {
     // Backend engine persists as a singleton via stockfish-worker, no need to terminate here.

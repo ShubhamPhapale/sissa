@@ -30,8 +30,8 @@ interface ChessBoardProps {
   allowBothColors?: boolean;
   /** Classification of the last move to show as a badge. */
   lastMoveClassification?: string | null;
-  /** Best move arrow to display. {from: string, to: string, color?: string} */
-  bestMoveArrow?: { from: string; to: string; color?: string } | null;
+  /** Best move arrows to display. */
+  bestMoveArrows?: Array<{ from: string; to: string; color?: string }> | null;
 }
 
 export default function ChessBoard({
@@ -43,7 +43,7 @@ export default function ChessBoard({
   interactive = true,
   allowBothColors = false,
   lastMoveClassification = null,
-  bestMoveArrow = null,
+  bestMoveArrows = null,
 }: ChessBoardProps) {
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [legalMoves, setLegalMoves] = useState<Move[]>([]);
@@ -350,7 +350,7 @@ export default function ChessBoard({
       )}
 
       {/* SVG Layer for Arrows */}
-      {bestMoveArrow && (
+      {bestMoveArrows && bestMoveArrows.length > 0 && (
         <svg
           className="absolute inset-0 pointer-events-none z-20"
           width="100%"
@@ -358,20 +358,23 @@ export default function ChessBoard({
           viewBox="0 0 100 100"
         >
           <defs>
-            <marker
-              id="arrowhead"
-              markerWidth="4"
-              markerHeight="4"
-              refX="3"
-              refY="2"
-              orient="auto"
-            >
-              <polygon points="0 0, 4 2, 0 4" fill={bestMoveArrow.color || "rgba(0, 128, 255, 0.7)"} />
-            </marker>
+            {bestMoveArrows.map((arrow, idx) => (
+              <marker
+                key={`marker-${idx}`}
+                id={`arrowhead-${idx}`}
+                markerWidth="4"
+                markerHeight="4"
+                refX="3"
+                refY="2"
+                orient="auto"
+              >
+                <polygon points="0 0, 4 2, 0 4" fill={arrow.color || "rgba(0, 128, 255, 0.7)"} />
+              </marker>
+            ))}
           </defs>
-          {(() => {
-            const sqFrom = algebraicToSquare(bestMoveArrow.from);
-            const sqTo = algebraicToSquare(bestMoveArrow.to);
+          {bestMoveArrows.map((arrow, idx) => {
+            const sqFrom = algebraicToSquare(arrow.from);
+            const sqTo = algebraicToSquare(arrow.to);
 
             let x1 = sqFrom.col * 12.5 + 6.25;
             let y1 = sqFrom.row * 12.5 + 6.25;
@@ -395,18 +398,18 @@ export default function ChessBoard({
 
             return (
               <line
+                key={`arrow-${idx}`}
                 x1={x1}
                 y1={y1}
                 x2={nx}
                 y2={ny}
-                stroke={bestMoveArrow.color || "rgba(0, 128, 255, 0.7)"}
+                stroke={arrow.color || "rgba(0, 128, 255, 0.7)"}
                 strokeWidth="2.5"
                 strokeLinecap="round"
-                markerEnd="url(#arrowhead)"
-                opacity="0.8"
+                markerEnd={`url(#arrowhead-${idx})`}
               />
             );
-          })()}
+          })}
         </svg>
       )}
     </div>

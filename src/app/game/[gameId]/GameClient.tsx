@@ -382,19 +382,20 @@ export default function GameClient() {
 
   const isMyTurn = Boolean(gameActive && myColor && game?.turn === myColor && !optimistic);
 
-  const bestMoveArrow = useMemo(() => {
+  const bestMoveArrows = useMemo(() => {
     if (!gameOver) return undefined;
     const activePly = viewPly !== null ? viewPly : moves.length - 1;
+    const arrows: Array<{ from: string; to: string; color: string }> = [];
     
-    // 1. Live Engine Analysis (blue arrow) takes precedence if enabled
+    // 1. Live Engine Analysis (blue arrow)
     if (engineEnabled) {
       const liveMove = analysis?.bestMove || (analysis?.pv && analysis.pv[0]);
       if (liveMove && liveMove.length >= 4 && liveMove !== "(none)") {
-        return {
+        arrows.push({
           from: liveMove.substring(0, 2),
           to: liveMove.substring(2, 4),
           color: "rgba(0, 128, 255, 0.7)", // blue
-        };
+        });
       }
     }
 
@@ -402,16 +403,29 @@ export default function GameClient() {
     if (fullGameAnalysis && activePly >= 0 && activePly < fullGameAnalysis.moves.length) {
       const bMove = fullGameAnalysis.moves[activePly].bestMove;
       if (bMove && bMove.length >= 4) {
-        return {
+        arrows.push({
           from: bMove.substring(0, 2),
           to: bMove.substring(2, 4),
           color: "rgba(102, 187, 106, 0.8)", // green
-        };
+        });
       }
     }
 
-    return null;
-  }, [fullGameAnalysis, analysis, viewPly, moves.length, engineEnabled]);
+    // Deduplicate: if blue and green point to the same move, only show green (or blue).
+    // Let's filter out green if it's identical to blue, or vice versa.
+    // Since blue is current turn evaluation, and green is previous turn evaluation, they rarely overlap exactly.
+    const uniqueArrows = [];
+    const seen = new Set();
+    for (const arr of arrows) {
+      const key = `${arr.from}-${arr.to}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueArrows.push(arr);
+      }
+    }
+
+    return uniqueArrows.length > 0 ? uniqueArrows : null;
+  }, [fullGameAnalysis, analysis, viewPly, moves.length, engineEnabled, gameOver]);
 
   useEffect(() => {
     if (!game) return;
