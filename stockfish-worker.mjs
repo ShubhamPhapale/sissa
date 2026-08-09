@@ -9,7 +9,7 @@ console.log = function(...args) {
   }
 };
 
-stockfish("single").then((engine) => {
+stockfish("lite-single").then((engine) => {
   process.on("message", (msg) => {
     engine.sendCommand(msg);
   });
