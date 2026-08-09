@@ -433,21 +433,26 @@ export default function GameAnalysis({
   );
 }
 
-function MoveTimesChart({ moves, activePly, onMoveClick }: { moves: Array<{ moveTime?: number }>, activePly?: number, onMoveClick?: (ply: number) => void }) {
+function MoveTimesChart({ moves, activePly, onMoveClick }: { moves: Array<{ moveTime?: number, timeLeft?: number }>, activePly?: number, onMoveClick?: (ply: number) => void }) {
   const [hoverPly, setHoverPly] = React.useState<number | null>(null);
   
   if (moves.length === 0) return null;
   const times = moves.map(m => m.moveTime ?? 0);
-  const maxTime = Math.max(...times, 1);
-  const width = 1000;
-  const height = 120;
+  const maxMoveTime = Math.max(...times, 1);
   
-  const getX = (i: number) => (i / Math.max(1, moves.length - 1)) * width;
-  const getY = (t: number) => height - (t / maxTime) * height;
-
-  const points = times.map((t, i) => ({ x: getX(i), y: getY(t), time: t, ply: i }));
-  const lineD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-  const fillD = `M 0 ${height} ` + points.map((p) => `L ${p.x} ${p.y}`).join(" ") + ` L ${width} ${height} Z`;
+  const timeLimits = moves.map(m => m.timeLeft ?? 0);
+  const maxTimeLeft = Math.max(...timeLimits, 1);
+  
+  const width = 1000;
+  const height = 180;
+  const centerY = height / 2;
+  
+  const w = Math.max(2, (width / Math.max(1, moves.length)) - 1);
+  const getX = (i: number) => {
+    if (moves.length <= 1) return width / 2;
+    const padding = w / 2;
+    return padding + (i / (moves.length - 1)) * (width - 2 * padding);
+  };
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -457,36 +462,79 @@ function MoveTimesChart({ moves, activePly, onMoveClick }: { moves: Array<{ move
     setHoverPly(Math.max(0, Math.min(moves.length - 1, ply)));
   };
 
-  const hoveredPoint = hoverPly !== null ? points[hoverPly] : null;
+  const hoveredPoint = hoverPly !== null ? { x: getX(hoverPly), ply: hoverPly, time: times[hoverPly], left: timeLimits[hoverPly] } : null;
+
+  // Generate paths for the "time left" lines (White up, Black down)
+  const whitePts: string[] = [];
+  const blackPts: string[] = [];
+  moves.forEach((m, i) => {
+    const x = getX(i);
+    const left = m.timeLeft ?? 0;
+    const isWhite = i % 2 === 0;
+    const yOffset = (left / maxTimeLeft) * (height / 2);
+    if (isWhite) {
+      whitePts.push(`${x},${centerY - yOffset}`);
+    } else {
+      blackPts.push(`${x},${centerY + yOffset}`);
+    }
+  });
+  
+  const whiteLineD = whitePts.length > 0 ? "M " + whitePts.join(" L ") : "";
+  const blackLineD = blackPts.length > 0 ? "M " + blackPts.join(" L ") : "";
+  
+  // Fill areas for the clock
+  const whiteAreaD = whitePts.length > 0 ? `M 0,${centerY} L ` + whitePts.join(" L ") + ` L ${getX(whitePts.length > 0 ? (moves.length-1) : 0)},${centerY} Z` : "";
+  const blackAreaD = blackPts.length > 0 ? `M 0,${centerY} L ` + blackPts.join(" L ") + ` L ${getX(blackPts.length > 0 ? (moves.length-1) : 0)},${centerY} Z` : "";
 
   return (
-    <div className="flex flex-col gap-2 mt-4 group relative">
+    <div className="flex flex-col gap-2 mt-6 group relative">
+      <h4 className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] text-center mb-2">
+        Move Times
+      </h4>
       <div className="relative w-full overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-input)]">
         <svg 
           viewBox={`0 0 ${width} ${height}`} 
           className="w-full cursor-crosshair" 
           preserveAspectRatio="none" 
-          style={{ height: 120 }}
+          style={{ height: 180 }}
           onMouseMove={handleMouseMove}
           onMouseLeave={() => setHoverPly(null)}
           onClick={() => hoverPly !== null && onMoveClick?.(hoverPly)}
         >
-          <path d={fillD} fill="rgba(255,152,0,0.15)" />
-          <path d={lineD} fill="none" stroke="#ff9800" strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
+          {/* Time Left Area */}
+          <path d={whiteAreaD} fill="rgba(255, 255, 255, 0.05)" />
+          <path d={blackAreaD} fill="rgba(0, 0, 0, 0.2)" />
           
-          {/* Reference lines */}
-          {[1, 5, 10, 30].filter(t => t < maxTime).map(t => {
-            const y = getY(t);
+          {/* Time Left Lines */}
+          <path d={whiteLineD} fill="none" stroke="rgba(255, 255, 255, 0.2)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+          <path d={blackLineD} fill="none" stroke="rgba(0, 0, 0, 0.4)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+
+          {/* Center Axis */}
+          <line x1="0" y1={centerY} x2={width} y2={centerY} stroke="var(--border)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+
+          {/* Move Time Bars */}
+          {moves.map((m, i) => {
+            const isWhite = i % 2 === 0;
+            const t = m.moveTime ?? 0;
+            const barH = (t / maxMoveTime) * (height / 2);
+            const x = getX(i);
+            
             return (
-              <g key={t}>
-                <line x1="0" y1={y} x2={width} y2={y} stroke="rgba(255,255,255,0.1)" strokeWidth="1" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
-                <text x="5" y={y - 4} fill="rgba(255,255,255,0.4)" fontSize="10" fontFamily="sans-serif">{t}s</text>
-              </g>
+              <rect
+                key={i}
+                x={x - w/2}
+                y={isWhite ? centerY - barH : centerY}
+                width={w}
+                height={barH}
+                fill={activePly === i ? "var(--accent)" : isWhite ? "rgba(255,255,255,0.7)" : "rgba(100,100,100,0.7)"}
+                className="transition-all duration-300"
+              />
             );
           })}
 
-          {activePly !== undefined && activePly >= 0 && activePly < points.length && (
-            <line x1={points[activePly].x} y1="0" x2={points[activePly].x} y2={height} stroke="var(--accent)" strokeWidth="1.5" strokeOpacity="0.6" vectorEffect="non-scaling-stroke" />
+          {/* Active / Hover Lines */}
+          {activePly !== undefined && activePly >= 0 && activePly < moves.length && (
+            <line x1={getX(activePly)} y1="0" x2={getX(activePly)} y2={height} stroke="var(--accent)" strokeWidth="1.5" strokeOpacity="0.6" vectorEffect="non-scaling-stroke" />
           )}
 
           {hoveredPoint && (
@@ -496,13 +544,21 @@ function MoveTimesChart({ moves, activePly, onMoveClick }: { moves: Array<{ move
 
         {hoveredPoint && (
           <div 
-            className="absolute top-2 px-2 py-1 bg-[#1a1a1a] text-white text-[10px] rounded shadow-lg pointer-events-none transform -translate-x-1/2"
+            className="absolute top-2 px-3 py-2 bg-[#1a1a1a] border border-[var(--border)] text-white text-xs rounded shadow-2xl pointer-events-none transform -translate-x-1/2 flex flex-col gap-1 z-10"
             style={{ left: `${(hoveredPoint.ply / Math.max(1, moves.length - 1)) * 100}%` }}
           >
-            {hoveredPoint.time.toFixed(1)}s
+            <span className="font-bold">{hoveredPoint.ply % 2 === 0 ? "White" : "Black"}</span>
+            <span>Move: {hoveredPoint.time.toFixed(1)}s</span>
+            {hoveredPoint.left !== undefined && <span>Clock: {formatTime(hoveredPoint.left)}</span>}
           </div>
         )}
       </div>
     </div>
   );
+}
+
+function formatTime(s: number) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2, '0')}`;
 }

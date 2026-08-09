@@ -1054,16 +1054,32 @@ export default function GameClient() {
             <div className="mt-12 w-full max-w-4xl mx-auto pb-12">
               <GameAnalysis
                 gameId={gameId}
-                moves={displayMoves.map((m, i) => {
-                  let moveTime = 0;
-                  if (m.createdAt) {
-                    const prevTime = i === 0 && game?.createdAt 
-                      ? new Date(game.createdAt).getTime() 
-                      : (i > 0 && displayMoves[i-1].createdAt ? new Date(displayMoves[i-1].createdAt!).getTime() : new Date(m.createdAt).getTime());
-                    moveTime = Math.max(0, (new Date(m.createdAt).getTime() - prevTime) / 1000);
-                  }
-                  return { san: m.san, check: m.check, checkmate: m.checkmate, moveTime };
-                })}
+                moves={(() => {
+                  let whiteTime = game?.timeControl || 600;
+                  let blackTime = game?.timeControl || 600;
+                  
+                  return displayMoves.map((m, i) => {
+                    let moveTime = 0;
+                    if (m.createdAt) {
+                      const prevTime = i === 0 && game?.createdAt 
+                        ? new Date(game.createdAt).getTime() 
+                        : (i > 0 && displayMoves[i-1].createdAt ? new Date(displayMoves[i-1].createdAt!).getTime() : new Date(m.createdAt).getTime());
+                      moveTime = Math.max(0, (new Date(m.createdAt).getTime() - prevTime) / 1000);
+                    }
+                    
+                    if (i % 2 === 0) {
+                      whiteTime -= moveTime;
+                      whiteTime = Math.max(0, whiteTime) + (game?.increment || 0);
+                    } else {
+                      blackTime -= moveTime;
+                      blackTime = Math.max(0, blackTime) + (game?.increment || 0);
+                    }
+                    
+                    const timeLeft = i % 2 === 0 ? whiteTime : blackTime;
+                    
+                    return { san: m.san, check: m.check, checkmate: m.checkmate, moveTime, timeLeft };
+                  });
+                })()}
                 onMoveClick={(ply) => { setViewPly(ply === displayMoves.length - 1 ? null : ply); setOptimistic(null); }}
                 activePly={optimistic?.plies != null ? optimistic.plies - 1 : (viewPly ?? moves.length - 1)}
                 onAnalysisComplete={setFullGameAnalysis}
