@@ -1,4 +1,6 @@
-import stockfish from "stockfish";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const stockfish = require("stockfish");
 
 const originalLog = console.log;
 console.log = function(...args) {

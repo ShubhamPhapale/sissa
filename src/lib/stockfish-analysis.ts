@@ -18,7 +18,7 @@ class StockfishSingleton {
   
   private worker: ChildProcess | null = null;
   private isProcessing = false;
-  private queue: Array<{ fen: string; depth: number; translateSan?: SanTranslator; onProgress?: (res: Partial<StockfishAnalysis>) => void; resolve: (res: StockfishAnalysis | null) => void }> = [];
+  private queue: Array<{ fen: string; depth: number; translateSan?: SanTranslator; onProgress?: (res: Partial<StockfishAnalysis>) => void; resolve: (res: StockfishAnalysis | null) => void; signal?: AbortSignal }> = [];
   
   private initPromise: Promise<void> | null = null;
 
@@ -167,10 +167,34 @@ class StockfishSingleton {
     fen: string,
     depth: number = 20,
     translateSan?: SanTranslator,
-    onProgress?: (info: Partial<StockfishAnalysis>) => void
+    onProgress?: (info: Partial<StockfishAnalysis>) => void,
+    signal?: AbortSignal
   ): Promise<StockfishAnalysis | null> {
     return new Promise((resolve) => {
-      this.queue.push({ fen, depth, translateSan, onProgress, resolve });
+      if (signal?.aborted) {
+        return resolve(null);
+      }
+
+      this.queue.push({ fen, depth, translateSan, onProgress, resolve, signal });
+      
+      if (signal) {
+        signal.addEventListener("abort", () => {
+          const idx = this.queue.findIndex(item => item.resolve === resolve);
+          if (idx !== -1) {
+            this.queue.splice(idx, 1);
+            resolve(null);
+          } else if (this.currentResolve === resolve) {
+            this.worker?.send("stop");
+            resolve(null);
+            this.currentResolve = null;
+            if (this.currentTimeout) clearTimeout(this.currentTimeout);
+            this.currentTimeout = null;
+            this.isProcessing = false;
+            this.processQueue();
+          }
+        });
+      }
+
       if (!this.isProcessing) {
         this.processQueue();
       }
@@ -227,7 +251,8 @@ export async function analyzePosition(
   fen: string,
   depth: number = 20,
   translateSan?: SanTranslator,
-  onProgress?: (info: Partial<StockfishAnalysis>) => void
+  onProgress?: (info: Partial<StockfishAnalysis>) => void,
+  signal?: AbortSignal
 ): Promise<StockfishAnalysis | null> {
-  return StockfishSingleton.getInstance().analyzePosition(fen, depth, translateSan, onProgress);
+  return StockfishSingleton.getInstance().analyzePosition(fen, depth, translateSan, onProgress, signal);
 }

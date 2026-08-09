@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
       const translator = createSanTranslator(fen);
       const analysis = await analyzePosition(fen, depth, translator, (progress) => {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'progress', ...progress })}\n\n`));
-      });
+      }, req.signal);
 
       controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done', ...analysis })}\n\n`));
       controller.close();
