@@ -67,18 +67,21 @@ export default function Header() {
           {!loading && (
             <div className="ml-4 pl-4 border-l border-white/10 flex items-center gap-3">
               {user ? (
-                <>
-                  <div className="flex flex-col items-end leading-tight">
-                    <span className="text-sm font-bold text-white">{user.username}</span>
+                <div className="flex items-center gap-3">
+                  <Link 
+                    href={`/profile/${encodeURIComponent(user.username)}`}
+                    className="flex flex-col items-end leading-tight text-white hover:text-[var(--accent)] transition-colors"
+                  >
+                    <span className="text-sm font-bold">{user.username}</span>
                     <span className="text-xs text-[var(--text-muted)]">{user.rating} ELO</span>
-                  </div>
+                  </Link>
                   <button 
                     onClick={() => logout()}
                     className="text-xs font-semibold uppercase tracking-wider text-red-400 hover:text-red-300 ml-2"
                   >
                     Logout
                   </button>
-                </>
+                </div>
               ) : (
                 <>
                   <Link href="/login" className="text-sm text-[var(--text-secondary)] hover:text-white transition-colors">Log In</Link>

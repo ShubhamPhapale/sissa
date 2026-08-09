@@ -12,6 +12,7 @@ import GameOverDialog from "@/components/GameOverDialog";
 import GameAnalysis from "@/components/GameAnalysis";
 import { useAuth } from "@/components/AuthProvider";
 import type { GameAnalysisResult } from "@/lib/game-analysis-types";
+import { CLASSIFICATION_COLORS, CLASSIFICATION_ICONS } from "@/lib/game-analysis-types";
 import {
   createInitialState,
   parseFEN,
@@ -927,6 +928,49 @@ export default function GameClient() {
 
             {/* Right column */}
             <div className="w-full lg:w-[260px] xl:w-[320px] shrink-0 flex flex-col gap-4 order-3 lg:sticky lg:top-4 lg:self-start lg:h-[calc(100vh-2rem)] move-history">
+              {/* Game Review Coach Bubble */}
+              {fullGameAnalysis && (() => {
+                const activeIndex = optimistic?.plies != null ? optimistic.plies - 1 : (viewPly ?? moves.length - 1);
+                if (activeIndex >= 0 && activeIndex < fullGameAnalysis.moves.length) {
+                  const mData = fullGameAnalysis.moves[activeIndex];
+                  const cls = mData.classification;
+                  const color = CLASSIFICATION_COLORS[cls as keyof typeof CLASSIFICATION_COLORS] || "#888";
+                  const icon = CLASSIFICATION_ICONS[cls as keyof typeof CLASSIFICATION_ICONS] || "";
+                  
+                  return (
+                    <div className="card p-4 border border-transparent shadow-lg bg-gradient-to-b from-[#1e1e1e] to-[var(--bg-card)]">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full text-white text-xl bg-[#2a2a2a] border-2" style={{ borderColor: color }}>
+                          {icon}
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold uppercase tracking-wider mb-1" style={{ color }}>
+                            {cls}
+                          </div>
+                          <div className="text-sm text-[var(--text-secondary)] leading-snug">
+                            {cls === "brilliant" && "Brilliant! You found a fantastic sacrifice or tactic."}
+                            {cls === "great" && "Great move! This finds a critical idea in the position."}
+                            {cls === "best" && "Best move! The engine agrees with your choice."}
+                            {cls === "excellent" && "Excellent. This is a very strong move."}
+                            {cls === "good" && "Good move. It keeps the position solid."}
+                            {cls === "book" && "Book move. Standard opening theory."}
+                            {cls === "inaccuracy" && "Inaccuracy. There was a better continuation available."}
+                            {cls === "mistake" && "Mistake. This gives up a significant advantage."}
+                            {cls === "blunder" && "Blunder! This drastically changes the evaluation of the game."}
+                          </div>
+                          {mData.bestMove && cls !== "best" && cls !== "book" && (
+                            <div className="mt-2 text-xs font-mono bg-[var(--bg-input)] px-2 py-1 rounded inline-block text-[var(--text-muted)]">
+                              Best: <span className="text-[var(--text-primary)]">{mData.bestMove}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
               <MoveHistory
                 moves={displayMoves.map((m) => ({ san: m.san, check: m.check, checkmate: m.checkmate }))}
                 activeMoveIndex={optimistic?.plies != null ? optimistic.plies - 1 : (viewPly ?? moves.length - 1)}

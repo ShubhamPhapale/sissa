@@ -418,8 +418,7 @@ export default function GameAnalysis({
         {/* Move Times graph */}
         <MoveTimesChart moves={moves} activePly={activePly} onMoveClick={onMoveClick} />
 
-        {/* Move detail (when a move is selected) */}
-        {renderMoveDetail()}
+        {/* Move detail is now in the Right Column (GameClient.tsx) */}
 
         {/* Annotated move list */}
         <div>
