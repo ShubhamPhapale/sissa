@@ -230,15 +230,15 @@ class StockfishSingleton {
       this.worker.send(`position fen ${item.fen}`);
       // Add movetime to ensure the engine always terminates eventually, 
       // preventing the WASM event loop from blocking indefinitely.
-      this.worker.send(`go depth ${item.depth} movetime 10000`);
+      this.worker.send(`go depth ${item.depth} movetime 2000`);
 
-      // Allow 10 seconds maximum for a deeper search
+      // Allow 2.5 seconds maximum for a deeper search
       this.currentTimeout = setTimeout(() => {
         if (this.currentResolve) {
           this.worker?.send("stop");
           // wait for bestmove to trigger resolve
         }
-      }, 10000);
+      }, 2500);
       
     } catch (err) {
       console.error("Error starting analysis", err);

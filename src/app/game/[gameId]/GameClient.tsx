@@ -721,11 +721,6 @@ export default function GameClient() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              {gameActive && !isSpectator && (
-                <button onClick={copyInvite} className="btn btn-secondary text-xs">
-                  {copied ? "Copied" : "Invite opponent"}
-                </button>
-              )}
               <span className="text-sm font-medium text-[var(--text-secondary)]">
                 {isSpectator ? "Spectator" : myColor === "w" ? "White" : "Black"}
               </span>

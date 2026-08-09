@@ -33,32 +33,30 @@ export async function POST(
     const botName = isWhiteBot ? game.whitePlayerName : game.blackPlayerName;
     const match = botName?.match(/Level (\d+)/);
     const level = match ? Math.max(1, Math.min(12, parseInt(match[1]))) : 5;
-    
-    // Scale level (1-12) to SkillLevel (0-20) and Depth (1-20)
+    // Scale level (1-12) to SkillLevel (0-20) and Depth (1-12)
     const skillLevel = Math.round(((level - 1) / 11) * 20);
-    const depth = Math.round(1 + ((level - 1) / 11) * 19);
+    const depth = Math.round(1 + ((level - 1) / 11) * 11);
 
     // Ask stockfish for best move
     const analysis = await analyzePosition(game.fen, depth, skillLevel);
     
-    if (!analysis || !analysis.bestMove) {
-      return NextResponse.json({ error: "Bot could not find move" }, { status: 500 });
+    let chosen;
+    if (analysis && analysis.bestMove) {
+      // Find the move in legal moves
+      const legal = generateLegalMoves(state, state.turn);
+      chosen = legal.find(m => {
+        const fromAlg = squareToAlgebraic(m.from);
+        const toAlg = squareToAlgebraic(m.to);
+        const promoAlg = m.promotion ? m.promotion.toLowerCase() : "";
+        return (fromAlg + toAlg + promoAlg) === analysis.bestMove;
+      });
     }
 
-    // Find the move in legal moves
-    const legal = generateLegalMoves(state, state.turn);
-    const chosen = legal.find(m => {
-      const fromAlg = squareToAlgebraic(m.from);
-      const toAlg = squareToAlgebraic(m.to);
-      const promoAlg = m.promotion ? m.promotion.toLowerCase() : "";
-      return (fromAlg + toAlg + promoAlg) === analysis.bestMove;
-    });
-
     if (!chosen) {
-      // Fallback to random move if stockfish returned nonsense (shouldn't happen)
-      const randomMove = legal[Math.floor(Math.random() * legal.length)];
-      if (!randomMove) return NextResponse.json({ error: "No legal moves" }, { status: 400 });
-      Object.assign(chosen ?? {}, randomMove);
+      const legal = generateLegalMoves(state, state.turn);
+      // Fallback to random move if stockfish returned nonsense (e.g. timeout)
+      chosen = legal[Math.floor(Math.random() * legal.length)];
+      if (!chosen) return NextResponse.json({ error: "No legal moves" }, { status: 400 });
     }
 
     // Execute move exactly like normal player
