@@ -632,18 +632,26 @@ export default function GameClient() {
 
             {/* Board */}
             <div className="flex-1 w-full max-w-[680px] flex flex-col items-center order-1 lg:order-2">
-              <div className="w-full relative flex flex-col gap-2">
-                <GameTimer
-                  seconds={clockFor(topColor)}
-                  totalSeconds={game.timeControl}
-                  isActive={gameActive && game.turn === topColor}
-                  playerColor={topColor}
-                  playerName={nameFor(topColor)}
-                  rating={ratingFor(topColor)}
-                  isYou={myColor === topColor}
-                  captured={capturedFor(topColor)}
-                  materialDiff={advFor(topColor)}
-                />
+              <div className="w-full flex flex-col gap-2">
+                {/* Top Timer */}
+                <div className="w-full flex">
+                  <div className="w-4 shrink-0 mr-2" />
+                  <div className="flex-1 min-w-0">
+                    <GameTimer
+                      seconds={clockFor(topColor)}
+                      totalSeconds={game.timeControl}
+                      isActive={gameActive && game.turn === topColor}
+                      playerColor={topColor}
+                      playerName={nameFor(topColor)}
+                      rating={ratingFor(topColor)}
+                      isYou={myColor === topColor}
+                      captured={capturedFor(topColor)}
+                      materialDiff={advFor(topColor)}
+                    />
+                  </div>
+                </div>
+
+                {/* Eval Bar + Board */}
                 <div className="flex flex-row items-stretch gap-2 w-full">
                   <div className="w-4 rounded bg-[#333] overflow-hidden flex flex-col-reverse shadow-inner shrink-0 relative">
                     <div 
@@ -664,17 +672,24 @@ export default function GameClient() {
                     />
                   </div>
                 </div>
-                <GameTimer
-                  seconds={clockFor(bottomColor)}
-                  totalSeconds={game.timeControl}
-                  isActive={gameActive && game.turn === bottomColor}
-                  playerColor={bottomColor}
-                  playerName={nameFor(bottomColor)}
-                  rating={ratingFor(bottomColor)}
-                  isYou={myColor === bottomColor}
-                  captured={capturedFor(bottomColor)}
-                  materialDiff={advFor(bottomColor)}
-                />
+
+                {/* Bottom Timer */}
+                <div className="w-full flex">
+                  <div className="w-4 shrink-0 mr-2" />
+                  <div className="flex-1 min-w-0">
+                    <GameTimer
+                      seconds={clockFor(bottomColor)}
+                      totalSeconds={game.timeControl}
+                      isActive={gameActive && game.turn === bottomColor}
+                      playerColor={bottomColor}
+                      playerName={nameFor(bottomColor)}
+                      rating={ratingFor(bottomColor)}
+                      isYou={myColor === bottomColor}
+                      captured={capturedFor(bottomColor)}
+                      materialDiff={advFor(bottomColor)}
+                    />
+                  </div>
+                </div>
 
                 {gameOver && game.winner && (
                   <GameOverDialog
