@@ -68,41 +68,6 @@ export default function GameAnalysis({
     }
   };
 
-  // Accuracy ring SVG
-  const renderAccuracyRing = (accuracy: number, label: string, emoji: string) => {
-    const radius = 36;
-    const circumference = 2 * Math.PI * radius;
-    const strokeDashoffset = circumference - (accuracy / 100) * circumference;
-    const color = getAccuracyColor(accuracy);
-
-    return (
-      <div className="flex flex-col items-center gap-2">
-        <div className="relative flex items-center justify-center" style={{ width: 96, height: 96 }}>
-          <svg width="96" height="96" className="transform -rotate-90">
-            <circle
-              cx="48" cy="48" r={radius}
-              stroke="var(--bg-input)" strokeWidth="7" fill="none"
-            />
-            <circle
-              cx="48" cy="48" r={radius}
-              stroke={color} strokeWidth="7" fill="none"
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              strokeLinecap="round"
-              style={{ transition: "stroke-dashoffset 1.2s ease-out" }}
-            />
-          </svg>
-          <div className="absolute text-lg font-bold text-[var(--text-primary)]">
-            {accuracy.toFixed(1)}%
-          </div>
-        </div>
-        <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-          {emoji} {label}
-        </span>
-      </div>
-    );
-  };
-
   // Classification badge row
   const renderClassificationRow = (type: string, count: number) => {
     return (
@@ -129,12 +94,21 @@ export default function GameAnalysis({
   ];
 
   // Classification summary for one side
-  const renderSideSummary = (title: string, counts: Record<string, number>) => {
+  const renderSideSummary = (title: string, accuracy: number, counts: Record<string, number>) => {
+    const accColor = getAccuracyColor(accuracy);
     return (
       <div className="flex-1 rounded-xl p-3 bg-[var(--bg-input)] overflow-hidden">
-        <h4 className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] mb-2 text-center truncate">
-          {title}
-        </h4>
+        <div className="flex items-center justify-between mb-3 border-b border-[var(--border)] pb-2">
+           <h4 className="text-sm font-bold text-[var(--text-primary)] truncate">
+             {title === "White" ? "♔" : "♚"} {title}
+           </h4>
+           <div className="flex flex-col items-end leading-none">
+             <span className="text-xl font-black" style={{ color: accColor }}>
+               {accuracy.toFixed(1)}<span className="text-sm">%</span>
+             </span>
+             <span className="text-[9px] uppercase tracking-widest text-[var(--text-muted)] mt-1">Accuracy</span>
+           </div>
+        </div>
         <div className="flex flex-col gap-0.5">
           {CLASSIFICATION_ORDER.map((type) => 
             renderClassificationRow(type, counts[type] || 0)
@@ -400,16 +374,10 @@ export default function GameAnalysis({
           <span className="text-[11px] text-[var(--text-muted)]">Stockfish Depth 12</span>
         </div>
 
-        {/* Accuracy rings */}
-        <div className="flex justify-center gap-8">
-          {renderAccuracyRing(analysis!.whiteAccuracy, "White", "♔")}
-          {renderAccuracyRing(analysis!.blackAccuracy, "Black", "♚")}
-        </div>
-
-        {/* Classification summaries */}
+        {/* Classification summaries (with accuracy) */}
         <div className="flex gap-3">
-          {renderSideSummary("White", analysis!.summary.white as unknown as Record<string, number>)}
-          {renderSideSummary("Black", analysis!.summary.black as unknown as Record<string, number>)}
+          {renderSideSummary("White", analysis!.whiteAccuracy, analysis!.summary.white as unknown as Record<string, number>)}
+          {renderSideSummary("Black", analysis!.blackAccuracy, analysis!.summary.black as unknown as Record<string, number>)}
         </div>
 
         {/* Eval graph */}
