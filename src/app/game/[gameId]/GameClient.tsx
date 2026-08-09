@@ -235,12 +235,7 @@ export default function GameClient() {
 
   const displayState = useMemo<GameState>(() => {
     if (optimistic) {
-      if (optimistic.plies === optimistic.state.moveHistory.length) return optimistic.state;
-      let s = createInitialState();
-      for (let i = 0; i < optimistic.plies; i++) {
-        s = makeMove(s, optimistic.state.moveHistory[i]);
-      }
-      return s;
+      return optimistic.state;
     }
     if (viewPly !== null) return replayTo(moves, viewPly + 1);
     return liveState;
@@ -250,6 +245,11 @@ export default function GameClient() {
 
   useEffect(() => {
     if (!game) return;
+    if (game.status === "playing") {
+      setAnalysis(null);
+      setAnalysisError(null);
+      return;
+    }
 
     let cancelled = false;
     setAnalysisLoading(true);
