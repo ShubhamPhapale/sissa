@@ -905,6 +905,24 @@ export default function GameClient() {
                   Last
                 </button>
               </div>
+
+              {gameOver && moves.length > 0 && (
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (replaySpeed !== null) {
+                        setReplaySpeed(null);
+                      } else {
+                        if (viewPly === null) setViewPly(0);
+                        setReplaySpeed(1000);
+                      }
+                    }}
+                    className={`btn text-xs px-4 ${replaySpeed !== null ? 'bg-[var(--accent)] text-white border-transparent' : 'btn-secondary'}`}
+                  >
+                    {replaySpeed !== null ? "⏸ Pause Replay" : "▶ Auto Replay"}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Right column */}

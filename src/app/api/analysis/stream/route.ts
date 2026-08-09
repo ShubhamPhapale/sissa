@@ -17,7 +17,9 @@ export async function GET(req: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
-      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'start' })}\n\n`));
+      try {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'start' })}\n\n`));
+      } catch (e) {}
 
       const translator = createSanTranslator(fen);
       const analysis = await analyzePosition(
@@ -26,11 +28,17 @@ export async function GET(req: NextRequest) {
         20, // skillLevel
         translator,
         (progress) => {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'progress', ...progress })}\n\n`));
-      }, req.signal);
+          try {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'progress', ...progress })}\n\n`));
+          } catch (e) {}
+        }, 
+        req.signal
+      );
 
-      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done', ...analysis })}\n\n`));
-      controller.close();
+      try {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done', ...analysis })}\n\n`));
+        controller.close();
+      } catch (e) {}
     }
   });
 
