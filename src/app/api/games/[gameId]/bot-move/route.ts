@@ -28,9 +28,18 @@ export async function POST(
     if ((state.turn === 'w' && !isWhiteBot) || (state.turn === 'b' && !isBlackBot)) {
       return NextResponse.json({ error: "Not bot's turn" }, { status: 400 });
     }
+    
+    // Parse bot level
+    const botName = isWhiteBot ? game.whitePlayerName : game.blackPlayerName;
+    const match = botName?.match(/Level (\d+)/);
+    const level = match ? Math.max(1, Math.min(12, parseInt(match[1]))) : 5;
+    
+    // Scale level (1-12) to SkillLevel (0-20) and Depth (1-20)
+    const skillLevel = Math.round(((level - 1) / 11) * 20);
+    const depth = Math.round(1 + ((level - 1) / 11) * 19);
 
     // Ask stockfish for best move
-    const analysis = await analyzePosition(game.fen, 10);
+    const analysis = await analyzePosition(game.fen, depth, skillLevel);
     
     if (!analysis || !analysis.bestMove) {
       return NextResponse.json({ error: "Bot could not find move" }, { status: 500 });

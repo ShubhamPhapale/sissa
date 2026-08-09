@@ -54,9 +54,30 @@ export default function ChessBoard({
   const boardRef = useRef<HTMLDivElement>(null);
   const [squareSize, setSquareSize] = useState(0);
 
+  const [premove, setPremove] = useState<{ from: Square; to: Square } | null>(null);
+  const [premoveSelectedSquare, setPremoveSelectedSquare] = useState<Square | null>(null);
+
   // XOR: black sees the board flipped by default, and the flip button toggles
   // from whatever that player's default orientation is.
   const flipped = (playerColor === "b") !== boardFlipped;
+
+  // Execute premove when it becomes our turn
+  useEffect(() => {
+    if (gameState.turn === playerColor && premove && interactive && !gameState.gameOver) {
+      const legal = getAllLegalMoves(gameState);
+      const match = legal.find(m => 
+        m.from.row === premove.from.row && 
+        m.from.col === premove.from.col && 
+        m.to.row === premove.to.row && 
+        m.to.col === premove.to.col &&
+        (m.promotion ? m.promotion === "Q" : true)
+      );
+      if (match) {
+        onMove(match);
+      }
+      setPremove(null);
+    }
+  }, [gameState, playerColor, premove, interactive, onMove]);
 
   useEffect(() => {
     const board = boardRef.current;
@@ -84,6 +105,29 @@ export default function ChessBoard({
         ? "w"
         : "b"
       : null;
+
+    const isMyTurn = gameState.turn === playerColor || allowBothColors;
+
+    if (!isMyTurn) {
+      if (premoveSelectedSquare) {
+        if (clickedColor === playerColor) {
+          setPremoveSelectedSquare({ row, col });
+        } else {
+          setPremove({ from: premoveSelectedSquare, to: { row, col } });
+          setPremoveSelectedSquare(null);
+        }
+      } else {
+        if (clickedColor === playerColor) {
+          setPremoveSelectedSquare({ row, col });
+          setPremove(null);
+        }
+      }
+      return;
+    }
+
+    // Clear any premove artifacts when making a normal move
+    setPremove(null);
+    setPremoveSelectedSquare(null);
 
     // If a piece is already selected
     if (selectedSquare) {
@@ -206,6 +250,9 @@ export default function ChessBoard({
             
             const isLastMoveTarget = lastMove && lastMove.to.row === row && lastMove.to.col === col;
 
+            const isPremoveSelected = premoveSelectedSquare?.row === row && premoveSelectedSquare?.col === col;
+            const isPremoveTarget = premove && ((premove.from.row === row && premove.from.col === col) || (premove.to.row === row && premove.to.col === col));
+
             // File label (bottom row)
             const showFileLabel =
               (!flipped && row === 7) || (flipped && row === 0);
@@ -220,7 +267,7 @@ export default function ChessBoard({
                   isSelected ? "selected" : ""
                 } ${isLast && !isSelected ? "last-move" : ""} ${
                   isCheck ? "check" : ""
-                }`}
+                } ${isPremoveSelected || isPremoveTarget ? "premove" : ""}`}
                 onClick={() => handleSquareClick(row, col)}
               >
                 {showRankLabel && <span className="rank-label">{8 - row}</span>}

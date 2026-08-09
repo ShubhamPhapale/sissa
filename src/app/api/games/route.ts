@@ -28,17 +28,15 @@ export async function POST(req: NextRequest) {
       : 0;
 
     const whiteName = String(whitePlayerName ?? "").trim() || "White";
-    const blackNameRaw = String(blackPlayerName ?? "").trim();
-    const blackName = blackNameRaw || null;
+    const blackName = String(blackPlayerName ?? "").trim() || null;
 
-    const whiteUser = await upsertUser(whiteName);
-    const blackUser = blackName
-      ? await upsertUser(
-          // Guarantee two distinct identities even if both boxes had the same name.
-          blackName === whiteName ? `${blackName} (black)` : blackName
-        )
-      : null;
-
+    // Use session if the user is authenticated.
+    // For Matchmaking, they are authenticated. For Play with Friend/Computer, they might not be.
+    // However, if they are authenticated, we don't actually pass userId in the body.
+    // We should rely on getSessionFromReq to get their true identity if they created the game.
+    const { getSessionFromReq } = await import("@/lib/auth");
+    const session = await getSessionFromReq(req);
+    
     const initial = Math.floor(seconds);
     const gameId = randomUUID().slice(0, 8);
 
@@ -46,10 +44,10 @@ export async function POST(req: NextRequest) {
       .insert(games)
       .values({
         id: gameId,
-        whitePlayerId: whiteUser?.id ?? null,
-        blackPlayerId: blackUser?.id ?? null,
-        whitePlayerName: whiteUser?.username ?? whiteName,
-        blackPlayerName: blackUser?.username ?? blackName,
+        whitePlayerId: session ? session.userId : null,
+        blackPlayerId: null, // second player joins later, or bot
+        whitePlayerName: session ? session.username : whiteName,
+        blackPlayerName: blackName,
         status: "playing",
         timeControl: initial,
         increment: inc,

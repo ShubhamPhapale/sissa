@@ -170,6 +170,8 @@ class StockfishSingleton {
     onProgress?: (info: Partial<StockfishAnalysis>) => void,
     signal?: AbortSignal
   ): Promise<StockfishAnalysis | null> {
+    // Only used directly inside the file anyway.
+
     return new Promise((resolve) => {
       if (signal?.aborted) {
         return resolve(null);
@@ -222,6 +224,8 @@ class StockfishSingleton {
         throw new Error("Engine process not available");
       }
 
+      const skillLevel = (item as any).skillLevel ?? 20;
+      this.worker.send(`setoption name Skill Level value ${skillLevel}`);
       this.worker.send(`position fen ${item.fen}`);
       // Add movetime to ensure the engine always terminates eventually, 
       // preventing the WASM event loop from blocking indefinitely.
@@ -250,9 +254,16 @@ class StockfishSingleton {
 export async function analyzePosition(
   fen: string,
   depth: number = 20,
+  skillLevel: number = 20,
   translateSan?: SanTranslator,
   onProgress?: (info: Partial<StockfishAnalysis>) => void,
   signal?: AbortSignal
 ): Promise<StockfishAnalysis | null> {
-  return StockfishSingleton.getInstance().analyzePosition(fen, depth, translateSan, onProgress, signal);
+  const instance = StockfishSingleton.getInstance();
+  return new Promise((resolve) => {
+    (instance as any).queue.push({ fen, depth, skillLevel, translateSan, onProgress, resolve, signal });
+    if (!(instance as any).isProcessing) {
+      (instance as any).processQueue();
+    }
+  });
 }

@@ -424,3 +424,6 @@ body {
     max-width: 100% !important;
   }
 }
+
+.chess-square.premove { background-color: rgba(244, 42, 50, 0.5) !important; }
+

@@ -23,6 +23,7 @@ export default function Home() {
   
   const [selectedTime, setSelectedTime] = useState(600);
   const [increment, setIncrement] = useState(0);
+  const [botLevel, setBotLevel] = useState(5);
   const [recentGames, setRecentGames] = useState<GameSummary[]>([]);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -148,7 +149,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           whitePlayerName: user ? user.username : "Anonymous",
-          blackPlayerName: "Stockfish (Level 5)",
+          blackPlayerName: `Stockfish (Level ${botLevel})`,
           timeControl: selectedTime,
           increment,
         }),
@@ -227,14 +228,14 @@ export default function Home() {
           {/* Create game */}
           <div id="new-game" className="card h-full p-6 md:p-7 relative overflow-hidden">
             {!user && !authLoading && (
-              <div className="absolute inset-0 z-10 backdrop-blur-[2px] bg-black/40 flex flex-col items-center justify-center p-6 text-center">
-                <h3 className="text-xl font-bold mb-2">Authentication Required</h3>
-                <p className="text-sm text-[var(--text-secondary)] mb-6 max-w-[250px]">
-                  Log in or sign up to play ranked games, earn ELO, and climb the leaderboard.
+              <div className="mb-6 p-4 rounded-lg bg-blue-900/20 border border-blue-500/30">
+                <h3 className="text-sm font-bold text-blue-300 mb-1">Play Ranked Games</h3>
+                <p className="text-xs text-blue-200/70 mb-3">
+                  Log in to play ranked matchmaking against others. Anonymous play is unrated.
                 </p>
-                <div className="flex gap-3">
-                  <Link href="/login" className="btn btn-primary px-6">Log In</Link>
-                  <Link href="/signup" className="btn btn-secondary px-6">Sign Up</Link>
+                <div className="flex gap-2">
+                  <Link href="/login" className="btn btn-primary text-xs py-1.5 px-4">Log In</Link>
+                  <Link href="/signup" className="btn btn-secondary text-xs py-1.5 px-4">Sign Up</Link>
                 </div>
               </div>
             )}
@@ -306,6 +307,25 @@ export default function Home() {
                     {error}
                   </div>
                 )}
+
+                <label className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">
+                  Computer Level: {botLevel} {botLevel === 1 ? "(Beginner)" : botLevel === 12 ? "(Super GM)" : ""}
+                </label>
+                <div className="mb-6">
+                  <input
+                    type="range"
+                    min="1"
+                    max="12"
+                    value={botLevel}
+                    onChange={(e) => setBotLevel(parseInt(e.target.value))}
+                    className="w-full accent-[var(--accent)]"
+                  />
+                  <div className="flex justify-between text-xs text-[var(--text-muted)] mt-1 px-1">
+                    <span>1</span>
+                    <span>6</span>
+                    <span>12</span>
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-3 gap-3">
                   <button

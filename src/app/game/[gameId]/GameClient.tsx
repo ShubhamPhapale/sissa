@@ -267,6 +267,21 @@ export default function GameClient() {
       .catch(() => {});
   }, [clocks.white, clocks.black, game, gameId, myColor, applyPayload]);
 
+  // Ask bot to move if it's their turn
+  useEffect(() => {
+    if (!game || game.status !== "playing") return;
+    const isBotTurn = 
+      (game.turn === "w" && game.whitePlayerName?.startsWith("Stockfish")) ||
+      (game.turn === "b" && game.blackPlayerName?.startsWith("Stockfish"));
+    
+    if (isBotTurn) {
+      const controller = new AbortController();
+      fetch(`/api/games/${game.id}/bot-move`, { method: "POST", signal: controller.signal })
+        .catch(() => {});
+      return () => controller.abort();
+    }
+  }, [game]);
+
   const liveState = useMemo<GameState>(
     () => (game ? parseFEN(game.fen) : createInitialState()),
     [game?.fen, game]
@@ -283,6 +298,7 @@ export default function GameClient() {
   const displayFen = useMemo(() => stateToFEN(displayState), [displayState]);
 
   const bestMoveArrow = useMemo(() => {
+    if (!gameOver) return undefined;
     const activePly = viewPly !== null ? viewPly : moves.length - 1;
     
     // 1. Live Engine Analysis (blue arrow) takes precedence if enabled
@@ -720,12 +736,14 @@ export default function GameClient() {
 
                 {/* Eval Bar + Board */}
                 <div className="flex flex-row items-stretch gap-2 w-full">
-                  <div className="w-4 rounded bg-[#333] overflow-hidden flex flex-col-reverse shadow-inner shrink-0 relative">
-                    <div 
-                      className="w-full bg-[#f0f0f0] transition-all duration-500 ease-out absolute bottom-0"
-                      style={{ height: evalHeight }}
-                    />
-                  </div>
+                  {gameOver && (
+                    <div className="w-4 rounded bg-[#333] overflow-hidden flex flex-col-reverse shadow-inner shrink-0 relative">
+                      <div 
+                        className="w-full bg-[#f0f0f0] transition-all duration-500 ease-out absolute bottom-0"
+                        style={{ height: evalHeight }}
+                      />
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <ChessBoard
                       gameState={displayState}
@@ -865,8 +883,9 @@ export default function GameClient() {
                 </div>
               )}
 
-              <div className="card p-3 shrink-0">
-                <div className="flex items-center justify-between gap-2 mb-2">
+              {gameOver && (
+                <div className="card p-3 shrink-0">
+                  <div className="flex items-center justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2">
                     <h4 className="text-xs text-[var(--text-muted)] uppercase tracking-wider">
                       Stockfish
@@ -928,7 +947,8 @@ export default function GameClient() {
                     {analysisLoading ? "Analyzing current position…" : "Waiting for engine data…"}
                   </p>
                 )}
-              </div>
+                </div>
+              )}
 
               <div className="card p-3">
                 <h4 className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">

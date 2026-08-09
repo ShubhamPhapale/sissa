@@ -102,10 +102,19 @@ export async function finalizeGame(
     const [white] = await db.select().from(users).where(eq(users.id, updated.whitePlayerId));
     const [black] = await db.select().from(users).where(eq(users.id, updated.blackPlayerId));
     if (white && black) {
-      const next = eloUpdate(white.rating, black.rating, winner);
+      // Classify game type
+      const estimatedDuration = updated.timeControl + 40 * updated.increment;
+      let ratingType: "bulletRating" | "blitzRating" | "rapidRating" | "classicalRating" = "blitzRating";
+      if (estimatedDuration < 180) ratingType = "bulletRating";
+      else if (estimatedDuration < 600) ratingType = "blitzRating";
+      else if (estimatedDuration < 1800) ratingType = "rapidRating";
+      else ratingType = "classicalRating";
+
+      const next = eloUpdate(white[ratingType], black[ratingType], winner);
       await db
         .update(users)
         .set({
+          [ratingType]: next.white,
           rating: next.white,
           wins: white.wins + (winner === "w" ? 1 : 0),
           losses: white.losses + (winner === "b" ? 1 : 0),
@@ -115,6 +124,7 @@ export async function finalizeGame(
       await db
         .update(users)
         .set({
+          [ratingType]: next.black,
           rating: next.black,
           wins: black.wins + (winner === "b" ? 1 : 0),
           losses: black.losses + (winner === "w" ? 1 : 0),
