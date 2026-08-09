@@ -156,6 +156,26 @@ export default function AnalysisClient() {
     setViewPly(null);
   };
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") {
+        setViewPly((p) => {
+          const cur = p === null ? moves.length - 1 : p;
+          return Math.max(-1, cur - 1);
+        });
+      } else if (e.key === "ArrowRight") {
+        setViewPly((p) => {
+          if (p === null) return null;
+          return p + 1 >= moves.length - 1 ? null : p + 1;
+        });
+      } else if (e.key === "f") {
+        setBoardFlipped((f) => !f);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [moves.length]);
+
   return (
     <main className="flex-1 p-4">
       <div className="mx-auto max-w-6xl">
@@ -198,7 +218,7 @@ export default function AnalysisClient() {
 
             <div className="mt-4 flex items-center gap-2">
               <button
-                onClick={() => setViewPly(0)}
+                onClick={() => setViewPly(-1)}
                 disabled={moves.length === 0}
                 className="btn btn-secondary text-xs disabled:opacity-40 px-3"
               >
@@ -207,7 +227,7 @@ export default function AnalysisClient() {
               <button
                 onClick={() => setViewPly(p => {
                   const cur = p === null ? moves.length - 1 : p;
-                  return Math.max(0, cur - 1);
+                  return Math.max(-1, cur - 1);
                 })}
                 disabled={moves.length === 0}
                 className="btn btn-secondary text-xs disabled:opacity-40 px-4"

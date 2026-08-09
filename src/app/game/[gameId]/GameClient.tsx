@@ -622,7 +622,7 @@ export default function GameClient() {
       if (e.key === "ArrowLeft") {
         setViewPly((p) => {
           const cur = p === null ? moves.length - 1 : p;
-          return Math.max(-1, cur - 1) < 0 ? null : cur - 1;
+          return Math.max(-1, cur - 1);
         });
         setOptimistic(null);
       } else if (e.key === "ArrowRight") {
@@ -856,7 +856,7 @@ export default function GameClient() {
 
               <div className="mt-4 flex items-center gap-2">
                 <button
-                  onClick={() => { setViewPly(0); setOptimistic(null); }}
+                  onClick={() => { setViewPly(-1); setOptimistic(null); }}
                   disabled={moves.length === 0}
                   className="btn btn-secondary text-xs disabled:opacity-40 px-3"
                 >
@@ -868,14 +868,14 @@ export default function GameClient() {
                       const newPlies = optimistic.plies - 1;
                       if (newPlies <= moves.length) {
                         setOptimistic(null);
-                        setViewPly(Math.max(0, newPlies - 1));
+                        setViewPly(Math.max(-1, newPlies - 1));
                       } else {
                         setOptimistic({ ...optimistic, plies: newPlies });
                       }
                     } else {
                       setViewPly((p) => {
                         const cur = p === null ? moves.length - 1 : p;
-                        return Math.max(0, cur - 1);
+                        return Math.max(-1, cur - 1);
                       });
                     }
                   }}
