@@ -37,6 +37,7 @@ export default function GameAnalysis({
   const [error, setError] = useState<string | null>(null);
   const [selectedMove, setSelectedMove] = useState<MoveClassification | null>(null);
   const [activeTab, setActiveTab] = useState<"review" | "movetimes">("review");
+  const [hoverPly, setHoverPly] = useState<number | null>(null);
 
   React.useEffect(() => {
     if (initialAnalysis) {
@@ -157,75 +158,59 @@ export default function GameAnalysis({
       return { x, y, classification: m.classification, ply: i };
     });
 
-    // Build the filled area path — fill above/below the midline.
-    // White area: from midline up to the eval line (when eval > 0).
-    // Black area: from midline down to the eval line (when eval < 0).
     const lineD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+    const whiteFillD = `M 0 ${midY} ` + points.map((p) => `L ${p.x} ${Math.min(p.y, midY)}`).join(" ") + ` L ${width} ${midY} Z`;
+    const blackFillD = `M 0 ${midY} ` + points.map((p) => `L ${p.x} ${Math.max(p.y, midY)}`).join(" ") + ` L ${width} ${midY} Z`;
 
-    // White fill (above midline)
-    const whiteFillD =
-      `M 0 ${midY} ` +
-      points.map((p) => `L ${p.x} ${Math.min(p.y, midY)}`).join(" ") +
-      ` L ${width} ${midY} Z`;
+    const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const ratio = x / rect.width;
+      const ply = Math.round(ratio * Math.max(1, analysis.moves.length - 1));
+      setHoverPly(Math.max(0, Math.min(analysis.moves.length - 1, ply)));
+    };
 
-    // Black fill (below midline)
-    const blackFillD =
-      `M 0 ${midY} ` +
-      points.map((p) => `L ${p.x} ${Math.max(p.y, midY)}`).join(" ") +
-      ` L ${width} ${midY} Z`;
+    const hoveredPoint = hoverPly !== null ? points[hoverPly] : null;
 
     return (
-      <div className="w-full overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-input)]">
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full" preserveAspectRatio="none" style={{ height: 120 }}>
-          {/* Background halves */}
+      <div className="relative w-full overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-input)] group">
+        <svg 
+          viewBox={`0 0 ${width} ${height}`} 
+          className="w-full cursor-crosshair" 
+          preserveAspectRatio="none" 
+          style={{ height: 120 }}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={() => setHoverPly(null)}
+          onClick={() => hoverPly !== null && onMoveClick?.(hoverPly)}
+        >
           <rect x="0" y="0" width={width} height={midY} fill="rgba(241,245,249,0.05)" />
           <rect x="0" y={midY} width={width} height={midY} fill="rgba(0,0,0,0.15)" />
-
-          {/* Filled areas */}
           <path d={whiteFillD} fill="rgba(241,245,249,0.25)" />
           <path d={blackFillD} fill="rgba(30,30,30,0.5)" />
-
-          {/* Center line */}
-          <line
-            x1="0" y1={midY} x2={width} y2={midY}
-            stroke="var(--border)" strokeWidth="1" strokeDasharray="6 3"
-          />
-
-          {/* Eval line */}
+          <line x1="0" y1={midY} x2={width} y2={midY} stroke="var(--border)" strokeWidth="1" strokeDasharray="6 3" />
           <path d={lineD} fill="none" stroke="var(--accent)" strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
+          
+          {points.filter(p => p.classification === "blunder" || p.classification === "mistake").map(p => (
+            <circle key={p.ply} cx={p.x} cy={p.y} r="5" fill={CLASSIFICATION_COLORS[p.classification]} stroke="var(--bg-card)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+          ))}
 
-          {/* Blunder / mistake markers */}
-          {points
-            .filter((p) => p.classification === "blunder" || p.classification === "mistake")
-            .map((p) => (
-              <circle
-                key={p.ply}
-                cx={p.x}
-                cy={p.y}
-                r="5"
-                fill={CLASSIFICATION_COLORS[p.classification]}
-                stroke="var(--bg-card)"
-                strokeWidth="1.5"
-                vectorEffect="non-scaling-stroke"
-                className="cursor-pointer"
-                onClick={() => onMoveClick?.(p.ply)}
-              />
-            ))}
-
-          {/* Active ply indicator */}
           {activePly !== undefined && activePly >= 0 && activePly < points.length && (
-            <line
-              x1={points[activePly].x}
-              y1="0"
-              x2={points[activePly].x}
-              y2={height}
-              stroke="var(--accent)"
-              strokeWidth="1.5"
-              strokeOpacity="0.6"
-              vectorEffect="non-scaling-stroke"
-            />
+            <line x1={points[activePly].x} y1="0" x2={points[activePly].x} y2={height} stroke="var(--accent)" strokeWidth="1.5" strokeOpacity="0.6" vectorEffect="non-scaling-stroke" />
+          )}
+
+          {hoveredPoint && (
+            <line x1={hoveredPoint.x} y1="0" x2={hoveredPoint.x} y2={height} stroke="white" strokeWidth="1" strokeOpacity="0.8" strokeDasharray="4 2" vectorEffect="non-scaling-stroke" />
           )}
         </svg>
+
+        {hoveredPoint && (
+          <div 
+            className="absolute top-2 px-2 py-1 bg-[#1a1a1a] text-white text-[10px] rounded shadow-lg pointer-events-none transform -translate-x-1/2"
+            style={{ left: `${(hoveredPoint.ply / Math.max(1, analysis.moves.length - 1)) * 100}%` }}
+          >
+            CP: {(analysis.moves[hoveredPoint.ply].evalAfter / 100).toFixed(2)}
+          </div>
+        )}
       </div>
     );
   };
