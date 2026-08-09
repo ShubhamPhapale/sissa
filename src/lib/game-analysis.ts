@@ -1,0 +1,230 @@
+import { analyzePosition } from "@/lib/stockfish-analysis";
+import {
+  createInitialState,
+  generateLegalMoves,
+  makeMove,
+  stateToFEN,
+  algebraicToSquare,
+  type GameState,
+} from "@/lib/chess-engine";
+import {
+  type MoveClassification,
+  type GameAnalysisResult,
+  type ClassificationCounts,
+} from "./game-analysis-types";
+
+/**
+ * Parse the score text returned by `analyzeFen` into centipawns from white's
+ * perspective. The `analyzeFen` function already returns the score from white's
+ * perspective (positive = white advantage).
+ */
+function parseScoreText(scoreText: string): { cp: number; isMate: boolean } {
+  if (scoreText.startsWith("#")) {
+    return { cp: 10000, isMate: true };
+  }
+  if (scoreText.startsWith("-#")) {
+    return { cp: -10000, isMate: true };
+  }
+  const val = parseFloat(scoreText);
+  if (!Number.isFinite(val)) return { cp: 0, isMate: false };
+  // scoreText is in pawns (e.g. "+0.34"), convert to centipawns
+  return { cp: Math.round(val * 100), isMate: false };
+}
+
+/** 
+ * Calculate Win Probability from centipawns (from White's perspective).
+ * Returns a value between 0 and 1.
+ */
+function getWinProb(cp: number): number {
+  return 1 / (1 + Math.exp(-0.00368208 * cp));
+}
+
+/** 
+ * Calculate move accuracy (0-100) based on WP loss. 
+ */
+function getMoveAccuracy(evalBefore: number, evalAfter: number, isWhite: boolean): number {
+  const wpBefore = getWinProb(isWhite ? evalBefore : -evalBefore);
+  const wpAfter = getWinProb(isWhite ? evalAfter : -evalAfter);
+  
+  const wpLoss = Math.max(0, wpBefore - wpAfter);
+  
+  // Approximation of Chess.com CAPS mapping:
+  // Maps 0 loss -> 100%, 0.1 loss -> 80%, etc.
+  return Math.max(0, Math.min(100, 100 * Math.exp(-3.5 * wpLoss)));
+}
+
+function emptyCounts(): ClassificationCounts {
+  return {
+    brilliant: 0,
+    great: 0,
+    best: 0,
+    excellent: 0,
+    good: 0,
+    book: 0,
+    inaccuracy: 0,
+    mistake: 0,
+    blunder: 0,
+  };
+}
+
+/**
+ * Replays one move using the same pattern as `replayTo` / `repetitionCount`
+ * in the existing codebase — find the legal move and apply it.
+ */
+function applyMoveFromRecord(
+  state: GameState,
+  m: { from: string; to: string; promotion: string | null }
+): GameState | null {
+  const from = algebraicToSquare(m.from);
+  const to = algebraicToSquare(m.to);
+  const legal = generateLegalMoves(state, state.turn);
+  const found = legal.find(
+    (c) =>
+      c.from.row === from.row &&
+      c.from.col === from.col &&
+      c.to.row === to.row &&
+      c.to.col === to.col &&
+      (m.promotion ? c.promotion === m.promotion : !c.promotion)
+  );
+  if (!found) return null;
+  return makeMove(state, found);
+}
+
+export async function analyzeGame(
+  moveList: Array<{
+    san: string;
+    from: string;
+    to: string;
+    promotion: string | null;
+  }>,
+  onProgress?: (completed: number, total: number) => void
+): Promise<GameAnalysisResult> {
+  const classifications: MoveClassification[] = [];
+  const summary = { white: emptyCounts(), black: emptyCounts() };
+
+  let state = createInitialState();
+  let currentFen = stateToFEN(state);
+
+  // Analyze the starting position to get the initial eval.
+  let previousEval = 0;
+  let previousIsMate = false;
+  try {
+    const initial = await analyzePosition(currentFen);
+    if (initial) {
+      const parsed = parseScoreText(initial.scoreText);
+      previousEval = parsed.cp;
+      previousIsMate = parsed.isMate;
+    }
+  } catch {
+    // Engine failed on starting position — use 0.
+  }
+
+  let whiteAccTotal = 0;
+  let blackAccTotal = 0;
+
+  try {
+    for (let i = 0; i < moveList.length; i++) {
+      const move = moveList[i];
+      const isWhite = i % 2 === 0;
+      const fenBeforeMove = currentFen;
+      const evalBefore = previousEval;
+
+      // Apply the move to get the next position.
+      const nextState = applyMoveFromRecord(state, move);
+      if (!nextState) {
+        // Illegal move — skip remainder.
+        break;
+      }
+
+      state = nextState;
+      currentFen = stateToFEN(state);
+
+      // Analyze the position AFTER the move.
+      let evalAfter = previousEval;
+      let bestMoveSan: string | null = null;
+      let bestEval = previousEval;
+      let afterIsMate = previousIsMate;
+
+      try {
+        const result = await analyzePosition(currentFen);
+        if (result) {
+          const parsed = parseScoreText(result.scoreText);
+          evalAfter = parsed.cp;
+          afterIsMate = parsed.isMate;
+          bestMoveSan = result.bestMoveSan ?? result.bestMove ?? null;
+          bestEval = evalAfter;
+        }
+      } catch {
+        // Use previous eval on failure.
+      }
+
+      // Compute centipawn loss from the moving side's perspective.
+      let cpLoss: number;
+      if (isWhite) {
+        cpLoss = evalBefore - evalAfter;
+      } else {
+        cpLoss = evalAfter - evalBefore;
+      }
+      cpLoss = Math.max(0, cpLoss);
+
+      // Classify the move.
+      let classification: MoveClassification["classification"];
+      if (i < 6) {
+        classification = "book";
+      } else if (cpLoss >= 200) {
+        classification = "blunder";
+      } else if (cpLoss >= 100) {
+        classification = "mistake";
+      } else if (cpLoss >= 50) {
+        classification = "inaccuracy";
+      } else if (cpLoss >= 20) {
+        classification = "good";
+      } else if (cpLoss >= 10) {
+        classification = "excellent";
+      } else {
+        classification = "best";
+      }
+
+      const moveAcc = getMoveAccuracy(evalBefore, evalAfter, isWhite);
+
+      // Track loss totals for accuracy.
+      if (isWhite) {
+        summary.white[classification]++;
+        whiteAccTotal += moveAcc;
+      } else {
+        summary.black[classification]++;
+        blackAccTotal += moveAcc;
+      }
+
+      classifications.push({
+        ply: i,
+        san: move.san,
+        fen: fenBeforeMove,
+        evalBefore,
+        evalAfter,
+        bestMove: bestMoveSan,
+        bestEval,
+        cpLoss,
+        classification,
+        isMate: afterIsMate || previousIsMate,
+      });
+
+      previousEval = evalAfter;
+      previousIsMate = afterIsMate;
+
+      onProgress?.(i + 1, moveList.length);
+    }
+  } finally {
+    // Backend engine persists as a singleton via stockfish-worker, no need to terminate here.
+  }
+
+  const whiteCount = Math.ceil(moveList.length / 2);
+  const blackCount = Math.floor(moveList.length / 2);
+
+  return {
+    moves: classifications,
+    whiteAccuracy: whiteCount > 0 ? (whiteAccTotal / whiteCount) : 100,
+    blackAccuracy: blackCount > 0 ? (blackAccTotal / blackCount) : 100,
+    summary,
+  };
+}
