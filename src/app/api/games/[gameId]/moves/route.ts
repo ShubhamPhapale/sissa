@@ -36,6 +36,7 @@ export async function POST(
 ) {
   try {
     const { gameId } = await params;
+    console.log(`[Move Request] Started for game ${gameId}`);
     const body = await req.json().catch(() => ({}));
     const { from, to, promotion, playerColor } = body as {
       from?: string;
@@ -45,6 +46,7 @@ export async function POST(
     };
 
     if (!from || !to || !SQUARE_RE.test(from) || !SQUARE_RE.test(to)) {
+      console.warn(`[Move Request] Invalid squares from=${from} to=${to}`);
       return NextResponse.json({ error: "Invalid 'from'/'to' square" }, { status: 400 });
     }
     if (promotion && !["Q", "R", "B", "N"].includes(promotion)) {
@@ -189,6 +191,7 @@ export async function POST(
 
     await notifyGameUpdate(gameId);
 
+    console.log(`[Move Request] Success for game ${gameId}: ${from}->${to}`);
     return NextResponse.json(
       {
         move: inserted,
@@ -198,7 +201,7 @@ export async function POST(
       { status: 201 }
     );
   } catch (error) {
-    console.error("Error submitting move:", error);
+    console.error("[Move Request] FATAL ERROR submitting move:", error);
     return NextResponse.json({ error: "Failed to submit move" }, { status: 500 });
   }
 }

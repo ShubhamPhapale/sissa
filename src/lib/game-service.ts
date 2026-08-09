@@ -151,11 +151,20 @@ export function serializeGame(game: GameRow) {
   };
 }
 
-/** Notifies listening clients that a game has been updated via Postgres NOTIFY. */
+import { EventEmitter } from "events";
+
+const globalForEvents = globalThis as typeof globalThis & {
+  __arenaGameEmitter?: EventEmitter;
+};
+export const gameEmitter = globalForEvents.__arenaGameEmitter ?? new EventEmitter();
+if (process.env.NODE_ENV !== "production") {
+  globalForEvents.__arenaGameEmitter = gameEmitter;
+}
+
+/** Notifies listening clients that a game has been updated. */
 export async function notifyGameUpdate(gameId: string) {
   try {
-    const channel = `game_update_${gameId.replace(/[^a-zA-Z0-9]/g, "_")}`;
-    await pool.query(`NOTIFY ${channel}`);
+    gameEmitter.emit(`game_update_${gameId}`);
   } catch (error) {
     console.error("Failed to notify game update:", error);
   }

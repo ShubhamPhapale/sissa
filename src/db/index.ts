@@ -17,4 +17,8 @@ if (process.env.NODE_ENV !== "production") {
   globalForDb.__arenaNextJsPostgresqlPool = pool;
 }
 
+pool.on("error", (err) => {
+  console.error("Unexpected error on idle client", err);
+});
+
 export const db = drizzle(pool);

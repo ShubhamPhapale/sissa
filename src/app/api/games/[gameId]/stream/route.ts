@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { db, pool } from "@/db";
 import { games, moves as movesTable, users } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
-import { serializeGame, settleTimeout } from "@/lib/game-service";
+import { serializeGame, settleTimeout, gameEmitter } from "@/lib/game-service";
 
 export const runtime = "nodejs";
 
@@ -17,16 +17,13 @@ export async function GET(
   const stream = new ReadableStream({
     async start(controller) {
       let isClosed = false;
-      const client = await pool.connect();
-      const channel = `game_update_${gameId.replace(/[^a-zA-Z0-9]/g, "_")}`;
+      const channel = `game_update_${gameId}`;
 
       const closeStream = () => {
         if (isClosed) return;
         isClosed = true;
         clearInterval(pingInterval);
-        client.query(`UNLISTEN ${channel}`).catch(() => {}).finally(() => {
-          client.release();
-        });
+        gameEmitter.off(channel, sendUpdate);
         try { controller.close(); } catch {}
       };
 
@@ -72,14 +69,7 @@ export async function GET(
         }
       };
 
-      // Listen for notifications
-      client.on("notification", (msg) => {
-        if (msg.channel === channel) {
-          sendUpdate();
-        }
-      });
-
-      await client.query(`LISTEN ${channel}`);
+      gameEmitter.on(channel, sendUpdate);
 
       // Send initial data immediately
       await sendUpdate();
