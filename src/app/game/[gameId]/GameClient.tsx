@@ -812,9 +812,9 @@ export default function GameClient() {
                       <p className="text-sm text-[var(--text-primary)]">
                         {analysis.bestMoveSan ?? analysis.bestMove ?? "Calculating..."}
                       </p>
-                      {analysis.pvSan.length > 0 && (
-                        <p className="mt-1 text-xs text-[var(--text-secondary)] break-words">
-                          {analysis.pvSan.join(" ")}
+                      {((analysis.pvSan?.length > 0 ? analysis.pvSan : analysis.pv) || []).length > 0 && (
+                        <p className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">
+                          {(analysis.pvSan?.length > 0 ? analysis.pvSan : analysis.pv).slice(1).join(" ")}
                         </p>
                       )}
                     </div>

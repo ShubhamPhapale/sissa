@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { analyzePosition } from "@/lib/stockfish-analysis";
+import { createSanTranslator } from "@/lib/chess-engine";
 
 export const runtime = "nodejs";
 
@@ -18,7 +19,8 @@ export async function GET(req: NextRequest) {
     async start(controller) {
       controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'start' })}\n\n`));
 
-      const analysis = await analyzePosition(fen, depth, undefined, (progress) => {
+      const translator = createSanTranslator(fen);
+      const analysis = await analyzePosition(fen, depth, translator, (progress) => {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'progress', ...progress })}\n\n`));
       });
 

@@ -705,3 +705,35 @@ export function getMaterialAdvantage(state: GameState): number {
   }
   return white - black;
 }
+export function createSanTranslator(initialFen: string) {
+  return (algebraicMoves: string[]): string[] => {
+    let state = parseFEN(initialFen);
+    const sanMoves: string[] = [];
+
+    for (const m of algebraicMoves) {
+      if (m.length < 4) break;
+      const fromStr = m.substring(0, 2);
+      const toStr = m.substring(2, 4);
+      const promotion = m.length > 4 ? m[4].toLowerCase() : undefined;
+
+      const fromSq = algebraicToSquare(fromStr);
+      const toSq = algebraicToSquare(toStr);
+
+      const validMoves = getValidMoves(state);
+      const move = validMoves.find(
+        (vm) =>
+          vm.from.row === fromSq.row &&
+          vm.from.col === fromSq.col &&
+          vm.to.row === toSq.row &&
+          vm.to.col === toSq.col &&
+          (!promotion || vm.promotion?.toLowerCase() === promotion)
+      );
+
+      if (!move) break; // Invalid move sequence
+
+      sanMoves.push(generateSAN(state, move));
+      state = makeMove(state, move);
+    }
+    return sanMoves;
+  };
+}
