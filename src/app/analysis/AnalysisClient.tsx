@@ -232,14 +232,15 @@ export default function AnalysisClient() {
           </div>
 
           {/* Right Column: History & Stockfish */}
-          <div className="w-full lg:w-[260px] xl:w-[320px] shrink-0 flex flex-col gap-4 lg:sticky lg:top-4">
+          <div className="w-full lg:w-[260px] xl:w-[320px] shrink-0 flex flex-col gap-4 lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)]">
             <MoveHistory
               moves={moves.map(m => ({ san: m.san, check: m.check, checkmate: m.checkmate }))}
               activeMoveIndex={activePly}
               onMoveClick={(i) => setViewPly(i === moves.length - 1 ? null : i)}
+              className="flex-1 min-h-0"
             />
 
-            <div className="card p-3">
+            <div className="card p-3 shrink-0">
               <div className="flex items-center justify-between gap-2 mb-2">
                 <h4 className="text-xs text-[var(--text-muted)] uppercase tracking-wider">
                   Stockfish

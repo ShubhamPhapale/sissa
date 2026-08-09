@@ -51,7 +51,7 @@ export default function MoveHistory({
         <span className="text-xs text-[var(--text-muted)]">{moves.length} plies</span>
       </div>
 
-      <div ref={scrollRef} className="move-history overflow-y-auto max-h-[320px] p-2">
+      <div ref={scrollRef} className="move-history overflow-y-auto flex-1 min-h-0 p-2">
         {rows.length === 0 ? (
           <div className="text-center py-8 text-[var(--text-muted)] text-sm">
             No moves yet

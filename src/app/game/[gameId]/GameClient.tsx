@@ -270,8 +270,8 @@ export default function GameClient() {
     }
 
     // 2. Game Review (green arrow)
-    if (fullGameAnalysis && activePly + 1 < fullGameAnalysis.moves.length) {
-      const bMove = fullGameAnalysis.moves[activePly + 1].bestMove;
+    if (fullGameAnalysis && activePly >= 0 && activePly < fullGameAnalysis.moves.length) {
+      const bMove = fullGameAnalysis.moves[activePly].bestMove;
       if (bMove && bMove.length >= 4) {
         return {
           from: bMove.substring(0, 2),
