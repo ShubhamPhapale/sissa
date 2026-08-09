@@ -397,7 +397,7 @@ export default function GameAnalysis({
       {/* No tabs, render stacked */}
       <div className="p-4 space-y-4">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] text-[var(--text-muted)]">Stockfish Depth 14</span>
+          <span className="text-[11px] text-[var(--text-muted)]">Stockfish Depth 12</span>
         </div>
 
         {/* Accuracy rings */}

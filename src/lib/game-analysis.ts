@@ -109,7 +109,7 @@ export async function analyzeGame(
   let previousEval = 0;
   let previousIsMate = false;
   try {
-    const initial = await analyzePosition(currentFen, 14);
+    const initial = await analyzePosition(currentFen, 12);
     if (initial) {
       const parsed = parseScoreText(initial.scoreText);
       previousEval = parsed.cp;
@@ -146,7 +146,7 @@ export async function analyzeGame(
       let afterIsMate = previousIsMate;
 
       try {
-        const result = await analyzePosition(currentFen, 14);
+        const result = await analyzePosition(currentFen, 12);
         if (result) {
           const parsed = parseScoreText(result.scoreText);
           evalAfter = parsed.cp;

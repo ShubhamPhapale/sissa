@@ -189,10 +189,10 @@ class StockfishSingleton {
             this.worker?.send("stop");
             resolve(null);
             this.currentResolve = null;
-            if (this.currentTimeout) clearTimeout(this.currentTimeout);
-            this.currentTimeout = null;
-            this.isProcessing = false;
-            this.processQueue();
+            this.currentProgress = null;
+            // DO NOT set isProcessing=false or processQueue() here!
+            // Wait for the worker to send 'bestmove' in response to 'stop',
+            // which will trigger the next item in the queue.
           }
         });
       }
