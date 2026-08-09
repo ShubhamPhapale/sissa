@@ -41,12 +41,12 @@ export default function LeaderboardClient({
           <span className="text-sm text-[var(--text-muted)]">Top 100 Players</span>
         </div>
         
-        <div className="flex bg-black/40 rounded-lg p-1 border border-white/10 shrink-0 self-start">
+        <div className="flex bg-black/40 rounded-lg p-1.5 border border-white/10 shrink-0 self-start w-full sm:w-auto">
           {(["bullet", "blitz", "rapid", "classical"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-1.5 text-sm font-medium rounded-md capitalize transition-colors ${
+              className={`flex-1 sm:flex-none px-5 py-2 text-sm font-medium rounded-md capitalize transition-colors ${
                 activeTab === tab
                   ? "bg-[var(--accent)] text-white shadow-sm"
                   : "text-[var(--text-secondary)] hover:text-white hover:bg-white/5"

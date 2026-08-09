@@ -120,6 +120,7 @@ export default function GameClient() {
   const [notFound, setNotFound] = useState(false);
   
   const [replaySpeed, setReplaySpeed] = useState<number | null>(null);
+  const [viewPly, setViewPly] = useState<number | null>(null);
 
   useEffect(() => {
     if (replaySpeed === null) return;
@@ -127,7 +128,6 @@ export default function GameClient() {
       setViewPly((p) => {
         const cur = p === null ? moves.length - 1 : p;
         if (cur + 1 >= moves.length - 1) {
-          setReplaySpeed(null);
           return null;
         }
         return cur + 1;
@@ -135,8 +135,14 @@ export default function GameClient() {
     }, replaySpeed);
     return () => clearInterval(interval);
   }, [replaySpeed, moves.length]);
+
+  useEffect(() => {
+    if (replaySpeed !== null && viewPly === null) {
+      setReplaySpeed(null);
+    }
+  }, [viewPly, replaySpeed]);
+
   const [boardFlipped, setBoardFlipped] = useState(false);
-  const [viewPly, setViewPly] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -334,7 +340,7 @@ export default function GameClient() {
     // 1. Live Engine Analysis (blue arrow) takes precedence if enabled
     if (engineEnabled) {
       const liveMove = analysis?.bestMove || (analysis?.pv && analysis.pv[0]);
-      if (liveMove && liveMove.length >= 4) {
+      if (liveMove && liveMove.length >= 4 && liveMove !== "(none)") {
         return {
           from: liveMove.substring(0, 2),
           to: liveMove.substring(2, 4),

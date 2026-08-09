@@ -172,54 +172,43 @@ export default function Home() {
       <Header />
 
       <main className="flex-1 px-4 py-5 md:px-6 md:py-8">
-        <section className="mx-auto mb-6 max-w-6xl overflow-hidden rounded-xl border border-white/10 bg-[linear-gradient(145deg,rgba(10,17,31,0.96),rgba(10,18,36,0.85))] p-6 shadow-2xl md:p-10 lg:p-12">
-          <div className="grid gap-8 md:grid-cols-[minmax(0,1.08fr),minmax(360px,0.92fr)] md:items-center">
-            <div className="space-y-5">
-              <div className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--text-secondary)]">
-                Live chess lobby
-              </div>
-              <div className="space-y-3">
-                <h1 className="max-w-xl text-4xl font-black tracking-tight text-white md:text-6xl">
-                  Play chess online against real players.
-                </h1>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {!authLoading && !user ? (
-                  <>
-                    <Link href="/signup" className="btn btn-primary inline-flex items-center gap-2 px-5 py-3">
-                      Sign up to play
-                    </Link>
-                    <Link href="/login" className="btn btn-secondary inline-flex items-center gap-2 px-5 py-3">
-                      Log in
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <Link href="#new-game" className="btn btn-primary inline-flex items-center gap-2 px-5 py-3">
-                      Quick match
-                    </Link>
-                    <Link href="/games" className="btn btn-secondary inline-flex items-center gap-2 px-5 py-3">
-                      Browse live games
-                    </Link>
-                  </>
-                )}
-              </div>
+        <section className="mx-auto mb-12 max-w-4xl pt-8 md:pt-16 lg:pt-24 pb-8 md:pb-12 text-center">
+          <div className="flex flex-col items-center justify-center space-y-8">
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--accent)] to-orange-600 shadow-xl shadow-orange-500/20 md:h-24 md:w-24">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-10 w-10 text-white md:h-12 md:w-12">
+                <path d="M19 22H5c-1.1 0-2-.9-2-2v-2h18v2c0 1.1-.9 2-2 2zM17 2H7c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-6 9H9v2h2v2h2v-2h2v-2h-2V9h-2v2zM7 10h1v4H7v-4zm9 0h1v4h-1v-4z" />
+              </svg>
             </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              {[
-                { title: "Quick match", body: "Play instantly against someone online with similar time control." },
-                { title: "ELO Ratings", body: "Compete and climb the global leaderboard to become a grandmaster." },
-                { title: "Server clocks", body: "Clocks stay authoritative on the server and sync back to every client." },
-                { title: "Game Review", body: "Get full Stockfish analysis after the match ends to improve your play." },
-              ].map((item) => (
-                <div key={item.title} className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-lg">
-                  <div className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--text-secondary)]">
-                    {item.title}
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-[var(--text-primary)]">{item.body}</p>
-                </div>
-              ))}
+            
+            <div className="space-y-4">
+              <h1 className="max-w-3xl text-4xl font-black tracking-tight text-white md:text-6xl mx-auto">
+                Play chess online against real players.
+              </h1>
+            </div>
+            
+            <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+              {!authLoading && !user ? (
+                <>
+                  <Link href="/signup" className="btn btn-primary inline-flex items-center gap-2 px-6 py-3.5 text-base">
+                    Sign up to play
+                  </Link>
+                  <Link href="/login" className="btn btn-secondary inline-flex items-center gap-2 px-6 py-3.5 text-base">
+                    Log in
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href="#new-game" className="btn btn-primary inline-flex items-center gap-2 px-6 py-3.5 text-base">
+                    Quick match
+                  </Link>
+                  <Link href="/games" className="btn btn-secondary inline-flex items-center gap-2 px-6 py-3.5 text-base">
+                    Browse live games
+                  </Link>
+                  <Link href="/leaderboard" className="btn btn-secondary inline-flex items-center gap-2 px-6 py-3.5 text-base bg-white/5 border-white/10 hover:bg-white/10">
+                    Leaderboard
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </section>
