@@ -2,7 +2,7 @@ services:
   - type: web
     name: sissa-chess
     env: node
-    buildCommand: npm install && npm run build
+    buildCommand: npm install && npm run build && npx drizzle-kit push
     startCommand: npm start
     plan: free
     envVars:
