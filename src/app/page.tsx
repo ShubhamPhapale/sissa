@@ -81,7 +81,7 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          whitePlayerName: user.username,
+          whitePlayerName: user ? user.username : "Anonymous",
           timeControl: selectedTime,
           increment,
         }),
