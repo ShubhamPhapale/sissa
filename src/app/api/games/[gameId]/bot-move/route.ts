@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { games, moves as movesTable } from "@/db/schema";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, and } from "drizzle-orm";
 import { parseFEN, makeMove, generateSAN, generateLegalMoves, squareToAlgebraic, stateToFEN } from "@/lib/chess-engine";
 import { settleTimeout, elapsedSecondsFor, finalizeGame, buildPgn, notifyGameUpdate, serializeGame, repetitionCount } from "@/lib/game-service";
 import { analyzePosition } from "@/lib/stockfish-analysis";
@@ -85,6 +85,19 @@ export async function POST(
     const ply = priorMoves.length + 1;
     const pgn = buildPgn([...priorMoves.map((m) => m.san), san + (chosen!.checkmate ? "#" : chosen!.check ? "+" : "")]);
 
+    const [updated] = await db.update(games).set({
+      fen: stateToFEN(nextState),
+      pgn,
+      whiteTimeRemaining: whiteTime,
+      blackTimeRemaining: blackTime,
+      lastMoveAt: new Date(),
+      updatedAt: new Date(),
+    }).where(and(eq(games.id, gameId), eq(games.fen, game.fen))).returning();
+
+    if (!updated) {
+      return NextResponse.json({ error: "State changed, please retry" }, { status: 409 });
+    }
+
     const [inserted] = await db.insert(movesTable).values({
       gameId,
       moveNumber: ply,
@@ -99,15 +112,6 @@ export async function POST(
       castle: chosen!.castle ?? null,
       enPassant: Boolean(chosen!.enPassant),
     }).returning();
-
-    const [updated] = await db.update(games).set({
-      fen: stateToFEN(nextState),
-      pgn,
-      whiteTimeRemaining: whiteTime,
-      blackTimeRemaining: blackTime,
-      lastMoveAt: new Date(),
-      updatedAt: new Date(),
-    }).where(eq(games.id, gameId)).returning();
 
     let finalGame = updated;
 

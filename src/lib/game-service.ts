@@ -141,7 +141,7 @@ export async function finalizeGame(
       await db
         .update(users)
         .set({
-          [ratingType]: next.black,
+          [ratingKey]: next.black,
           rating: next.black,
           wins: black.wins + (winner === "b" ? 1 : 0),
           losses: black.losses + (winner === "w" ? 1 : 0),

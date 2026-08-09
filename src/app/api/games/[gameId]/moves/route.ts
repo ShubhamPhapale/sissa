@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { moves as movesTable, games } from "@/db/schema";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, and } from "drizzle-orm";
 import {
   parseFEN,
   stateToFEN,
@@ -138,6 +138,24 @@ export async function POST(
       san + (chosen.checkmate ? "#" : chosen.check ? "+" : ""),
     ]);
 
+    const [updated] = await db
+      .update(games)
+      .set({
+        fen: stateToFEN(nextState),
+        pgn,
+        whiteTimeRemaining: whiteTime,
+        blackTimeRemaining: blackTime,
+        drawOfferedBy: null, // any pending offer is declined by moving
+        lastMoveAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(games.id, gameId), eq(games.fen, game.fen)))
+      .returning();
+
+    if (!updated) {
+      return NextResponse.json({ error: "State changed, please retry" }, { status: 409 });
+    }
+
     const [inserted] = await db
       .insert(movesTable)
       .values({
@@ -154,20 +172,6 @@ export async function POST(
         castle: chosen.castle ?? null,
         enPassant: Boolean(chosen.enPassant),
       })
-      .returning();
-
-    const [updated] = await db
-      .update(games)
-      .set({
-        fen: stateToFEN(nextState),
-        pgn,
-        whiteTimeRemaining: whiteTime,
-        blackTimeRemaining: blackTime,
-        drawOfferedBy: null, // any pending offer is declined by moving
-        lastMoveAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(games.id, gameId))
       .returning();
 
     let finalGame = updated;

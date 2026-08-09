@@ -29,19 +29,22 @@ export async function POST(req: NextRequest) {
       .limit(1);
 
     if (opponent) {
-      // Match found! Create a game.
-      // Delete the opponent from queue
-      await db.delete(matchmaking).where(eq(matchmaking.id, opponent.id));
-      
-      const [oppUser] = await db.select().from(users).where(eq(users.id, opponent.userId));
-      const oppName = oppUser ? oppUser.username : "Opponent";
-      
-      const gameId = uuidv4().substring(0, 8);
-      const isWhite = Math.random() > 0.5;
+      // Attempt to atomically claim this opponent
+      const deleted = await db.delete(matchmaking)
+        .where(eq(matchmaking.id, opponent.id))
+        .returning();
 
-      const [w, b] = isWhite 
-        ? [{ id: user.id, name: user.username }, { id: opponent.userId, name: oppName }]
-        : [{ id: opponent.userId, name: oppName }, { id: user.id, name: user.username }];
+      if (deleted.length > 0) {
+        // Successfully claimed! Create a game.
+        const [oppUser] = await db.select().from(users).where(eq(users.id, opponent.userId));
+        const oppName = oppUser ? oppUser.username : "Opponent";
+        
+        const gameId = uuidv4().substring(0, 8);
+        const isWhite = Math.random() > 0.5;
+
+        const [w, b] = isWhite 
+          ? [{ id: user.id, name: user.username }, { id: opponent.userId, name: oppName }]
+          : [{ id: opponent.userId, name: oppName }, { id: user.id, name: user.username }];
 
       await db.insert(games).values({
         id: gameId,
@@ -57,9 +60,10 @@ export async function POST(req: NextRequest) {
       });
 
       return NextResponse.json({ matched: true, gameId });
+      }
     }
 
-    // No match found, join queue
+    // No match found or failed to claim opponent, join queue
     // Delete existing queue entry if any
     await db.delete(matchmaking).where(eq(matchmaking.userId, session.userId));
     
