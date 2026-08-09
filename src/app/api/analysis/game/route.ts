@@ -22,6 +22,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Game not found" }, { status: 404 });
     }
 
+    if (game.analysis) {
+      return NextResponse.json({ analysis: game.analysis });
+    }
+
     // Fetch moves ordered by move number.
     const gameMoves = await db
       .select()
@@ -41,6 +45,8 @@ export async function POST(req: NextRequest) {
     }));
 
     const analysis = await analyzeGame(moveList);
+
+    await db.update(games).set({ analysis }).where(eq(games.id, gameId));
 
     return NextResponse.json({ analysis });
   } catch (error) {

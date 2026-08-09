@@ -14,6 +14,7 @@ interface GameAnalysisProps {
   onMoveClick?: (ply: number) => void;
   onAnalysisComplete?: (analysis: GameAnalysisResult) => void;
   activePly?: number;
+  initialAnalysis?: GameAnalysisResult | null;
 }
 
 function getAccuracyColor(acc: number) {
@@ -29,11 +30,16 @@ export default function GameAnalysis({
   onMoveClick,
   onAnalysisComplete,
   activePly,
+  initialAnalysis,
 }: GameAnalysisProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysis, setAnalysis] = useState<GameAnalysisResult | null>(null);
+  const [analysis, setAnalysis] = useState<GameAnalysisResult | null>(initialAnalysis || null);
   const [error, setError] = useState<string | null>(null);
   const [selectedMove, setSelectedMove] = useState<MoveClassification | null>(null);
+
+  React.useEffect(() => {
+    if (initialAnalysis) setAnalysis(initialAnalysis);
+  }, [initialAnalysis]);
 
   const handleAnalyze = async () => {
     setIsAnalyzing(true);

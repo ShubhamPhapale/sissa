@@ -18,11 +18,12 @@ class StockfishSingleton {
   
   private worker: ChildProcess | null = null;
   private isProcessing = false;
-  private queue: Array<{ fen: string; depth: number; translateSan?: SanTranslator; resolve: (res: StockfishAnalysis | null) => void }> = [];
+  private queue: Array<{ fen: string; depth: number; translateSan?: SanTranslator; onProgress?: (res: Partial<StockfishAnalysis>) => void; resolve: (res: StockfishAnalysis | null) => void }> = [];
   
   private initPromise: Promise<void> | null = null;
 
   private currentResolve: ((res: StockfishAnalysis | null) => void) | null = null;
+  private currentProgress: ((res: Partial<StockfishAnalysis>) => void) | null = null;
   private currentTimeout: NodeJS.Timeout | null = null;
   
   private currentAnalysis: Partial<StockfishAnalysis> = { pv: [], pvSan: [] };
@@ -125,6 +126,10 @@ class StockfishSingleton {
           }
         }
       }
+
+      if (this.currentProgress) {
+        this.currentProgress({ ...this.currentAnalysis });
+      }
     } else if (line.startsWith("bestmove")) {
       const match = line.match(/bestmove ([a-h1-8qrbn]+)/);
       if (match) {
@@ -161,10 +166,11 @@ class StockfishSingleton {
   public async analyzePosition(
     fen: string,
     depth: number = 20,
-    translateSan?: SanTranslator
+    translateSan?: SanTranslator,
+    onProgress?: (info: Partial<StockfishAnalysis>) => void
   ): Promise<StockfishAnalysis | null> {
     return new Promise((resolve) => {
-      this.queue.push({ fen, depth, translateSan, resolve });
+      this.queue.push({ fen, depth, translateSan, onProgress, resolve });
       if (!this.isProcessing) {
         this.processQueue();
       }
@@ -180,6 +186,7 @@ class StockfishSingleton {
     this.isProcessing = true;
     const item = this.queue.shift()!;
     this.currentResolve = item.resolve;
+    this.currentProgress = item.onProgress ?? null;
     this.translator = item.translateSan ?? null;
     this.currentAnalysis = { pv: [], pvSan: [] };
     this.currentIsBlackToMove = item.fen.includes(" b ");
@@ -219,7 +226,8 @@ class StockfishSingleton {
 export async function analyzePosition(
   fen: string,
   depth: number = 20,
-  translateSan?: SanTranslator
+  translateSan?: SanTranslator,
+  onProgress?: (info: Partial<StockfishAnalysis>) => void
 ): Promise<StockfishAnalysis | null> {
-  return StockfishSingleton.getInstance().analyzePosition(fen, depth, translateSan);
+  return StockfishSingleton.getInstance().analyzePosition(fen, depth, translateSan, onProgress);
 }

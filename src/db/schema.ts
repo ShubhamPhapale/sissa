@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer, boolean, varchar } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, integer, boolean, varchar, jsonb } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -27,6 +27,7 @@ export const games = pgTable("games", {
   whiteTimeRemaining: integer("white_time_remaining").notNull().default(600),
   blackTimeRemaining: integer("black_time_remaining").notNull().default(600),
   lastMoveAt: timestamp("last_move_at"),
+  analysis: jsonb("analysis"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

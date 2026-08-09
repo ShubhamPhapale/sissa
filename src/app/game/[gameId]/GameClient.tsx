@@ -255,34 +255,39 @@ export default function GameClient() {
     setAnalysisLoading(true);
     setAnalysisError(null);
 
-    const timeout = window.setTimeout(async () => {
-      try {
-        const res = await fetch("/api/analysis", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fen: displayFen, depth: analysisDepth }),
-        });
-        const data = await res.json();
-        if (cancelled) return;
-        if (!res.ok) {
-          setAnalysis(null);
-          setAnalysisError(data.error ?? "Analysis unavailable");
+    let eventSource: EventSource | null = null;
+    const timeout = window.setTimeout(() => {
+      eventSource = new EventSource(`/api/analysis/stream?fen=${encodeURIComponent(displayFen)}&depth=${analysisDepth}`);
+      eventSource.onmessage = (e) => {
+        if (cancelled) {
+          eventSource?.close();
           return;
         }
-        setAnalysis(data.analysis as StockfishAnalysis);
-      } catch {
-        if (!cancelled) {
-          setAnalysisError("Analysis unavailable");
-          setAnalysis(null);
+        try {
+          const data = JSON.parse(e.data);
+          if (data.type === 'progress' || data.type === 'done') {
+            setAnalysis((prev) => ({ ...prev, ...data } as StockfishAnalysis));
+            if (data.type === 'done') {
+              setAnalysisLoading(false);
+              eventSource?.close();
+            }
+          }
+        } catch {
+          // ignore parse errors
         }
-      } finally {
-        if (!cancelled) setAnalysisLoading(false);
-      }
-    }, 450);
+      };
+      eventSource.onerror = () => {
+        if (cancelled) return;
+        setAnalysisError("Analysis unavailable");
+        setAnalysisLoading(false);
+        eventSource?.close();
+      };
+    }, 300);
 
     return () => {
       cancelled = true;
-      window.clearTimeout(timeout);
+      clearTimeout(timeout);
+      eventSource?.close();
     };
   }, [displayFen, gameId, viewPly, analysisDepth]);
 
@@ -563,7 +568,7 @@ export default function GameClient() {
             </div>
           )}
 
-          {gameActive && !isSpectator && origin && (
+          {gameActive && !isSpectator && origin && moves.length === 0 && !(game.whitePlayerName && game.blackPlayerName) && (
             <div className="card mb-4 p-4">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="space-y-2">
@@ -750,6 +755,7 @@ export default function GameClient() {
                   onMoveClick={(ply) => { setViewPly(ply === displayMoves.length - 1 ? null : ply); setOptimistic(null); }}
                   activePly={optimistic?.plies != null ? optimistic.plies - 1 : (viewPly ?? moves.length - 1)}
                   onAnalysisComplete={setFullGameAnalysis}
+                  initialAnalysis={(game as any).analysis}
                 />
               )}
 
