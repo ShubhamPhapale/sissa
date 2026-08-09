@@ -437,13 +437,6 @@ export default function GameAnalysis({
         {renderMoveList()}
       </div>
 
-      {/* Re-analyze button */}
-      <button
-        onClick={handleAnalyze}
-        className="btn btn-secondary text-xs w-full"
-      >
-        🔄 Re-analyze
-      </button>
     </div>
   );
 }

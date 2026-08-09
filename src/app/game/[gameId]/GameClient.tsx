@@ -126,6 +126,16 @@ export default function GameClient() {
   const inFlight = useRef(false);
   const mutationInFlight = useRef(false);
 
+  const evalHeight = useMemo(() => {
+    if (!analysis || !analysis.scoreText) return "50%";
+    if (analysis.scoreText.startsWith("-#")) return "0%";
+    if (analysis.scoreText.startsWith("#")) return "100%";
+    const score = Number(analysis.scoreText);
+    if (!Number.isFinite(score)) return "50%";
+    // Scale where +10 is 100%, 0 is 50%, -10 is 0%.
+    return `${Math.max(0, Math.min(100, 50 + score * 5))}%`;
+  }, [analysis]);
+
   const applyPayload = useCallback(
     (payloadGame: ApiGame, payloadMoves?: ApiMove[], payloadPlayers?: ApiPlayers) => {
       setGame(payloadGame);
@@ -535,11 +545,8 @@ export default function GameClient() {
       <main className="flex-1 p-4">
         <div className="mx-auto max-w-6xl">
           {/* Status bar */}
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-[var(--text-secondary)]">
-                Game <span className="font-mono text-[var(--text-primary)]">{gameId}</span>
-              </span>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
+              <div className="flex items-center gap-3">
               <span className={`badge ${gameActive ? "badge-green" : "badge-blue"}`}>
                 {gameActive ? "Live" : "Finished"}
               </span>
@@ -607,30 +614,7 @@ export default function GameClient() {
 
           <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 lg:items-start lg:justify-center">
             {/* Left column */}
-            <div className="w-full max-w-[300px] flex flex-col gap-4 shrink-0 lg:sticky lg:top-4 order-2 lg:order-1">
-              <GameTimer
-                seconds={clockFor(topColor)}
-                totalSeconds={game.timeControl}
-                isActive={gameActive && game.turn === topColor}
-                playerColor={topColor}
-                playerName={nameFor(topColor)}
-                rating={ratingFor(topColor)}
-                isYou={myColor === topColor}
-                captured={capturedFor(topColor)}
-                materialDiff={advFor(topColor)}
-              />
-              <GameTimer
-                seconds={clockFor(bottomColor)}
-                totalSeconds={game.timeControl}
-                isActive={gameActive && game.turn === bottomColor}
-                playerColor={bottomColor}
-                playerName={nameFor(bottomColor)}
-                rating={ratingFor(bottomColor)}
-                isYou={myColor === bottomColor}
-                captured={capturedFor(bottomColor)}
-                materialDiff={advFor(bottomColor)}
-              />
-
+            <div className="w-full max-w-[280px] flex flex-col gap-6 shrink-0 order-2 lg:order-1">
               <GameControls
                 onResign={() => doAction("resign")}
                 onOfferDraw={() => doAction("offer-draw")}
@@ -648,16 +632,48 @@ export default function GameClient() {
 
             {/* Board */}
             <div className="flex-1 w-full max-w-[680px] flex flex-col items-center order-1 lg:order-2">
-              <div className="w-full relative">
-                <ChessBoard
-                  gameState={displayState}
-                  playerColor={myColor ?? "w"}
-                  onMove={handleMove}
-                  lastMove={lastMove}
-                  boardFlipped={boardFlipped}
-                  interactive={Boolean((isMyTurn && isLiveView && !isSpectator) || gameOver)}
-                  allowBothColors={gameOver}
-                  lastMoveClassification={currentClassification}
+              <div className="w-full relative flex flex-col gap-2">
+                <GameTimer
+                  seconds={clockFor(topColor)}
+                  totalSeconds={game.timeControl}
+                  isActive={gameActive && game.turn === topColor}
+                  playerColor={topColor}
+                  playerName={nameFor(topColor)}
+                  rating={ratingFor(topColor)}
+                  isYou={myColor === topColor}
+                  captured={capturedFor(topColor)}
+                  materialDiff={advFor(topColor)}
+                />
+                <div className="flex flex-row items-stretch gap-2 w-full">
+                  <div className="w-4 rounded bg-[#333] overflow-hidden flex flex-col-reverse shadow-inner shrink-0 relative">
+                    <div 
+                      className="w-full bg-[#f0f0f0] transition-all duration-500 ease-out absolute bottom-0"
+                      style={{ height: evalHeight }}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <ChessBoard
+                      gameState={displayState}
+                      playerColor={myColor ?? "w"}
+                      onMove={handleMove}
+                      lastMove={lastMove}
+                      boardFlipped={boardFlipped}
+                      interactive={Boolean((isMyTurn && isLiveView && !isSpectator) || gameOver)}
+                      allowBothColors={gameOver}
+                      lastMoveClassification={currentClassification}
+                    />
+                  </div>
+                </div>
+                <GameTimer
+                  seconds={clockFor(bottomColor)}
+                  totalSeconds={game.timeControl}
+                  isActive={gameActive && game.turn === bottomColor}
+                  playerColor={bottomColor}
+                  playerName={nameFor(bottomColor)}
+                  rating={ratingFor(bottomColor)}
+                  isYou={myColor === bottomColor}
+                  captured={capturedFor(bottomColor)}
+                  materialDiff={advFor(bottomColor)}
                 />
 
                 {gameOver && game.winner && (
@@ -672,11 +688,6 @@ export default function GameClient() {
                   />
                 )}
 
-                {gameActive && !isMyTurn && !isSpectator && isLiveView && (
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-5 py-2 rounded-full bg-[var(--bg-card)] border border-[var(--border)] text-sm font-medium shadow-xl backdrop-blur-md">
-                    Waiting for {nameFor(game.turn)}...
-                  </div>
-                )}
               </div>
 
               <div className="mt-4 flex items-center gap-2">
@@ -788,20 +799,6 @@ export default function GameClient() {
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-[var(--text-secondary)]">Eval</span>
                         <span className="font-semibold text-[var(--text-primary)]">{analysis.scoreText}</span>
-                      </div>
-                      <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-lime-300 to-orange-400"
-                          style={{
-                            width: (() => {
-                              if (analysis.scoreText.startsWith("-#")) return "0%";
-                              if (analysis.scoreText.startsWith("#")) return "100%";
-                              const score = Number(analysis.scoreText);
-                              if (!Number.isFinite(score)) return "50%";
-                              return `${Math.max(0, Math.min(100, 50 + score * 18))}%`;
-                            })(),
-                          }}
-                        />
                       </div>
                     </div>
 

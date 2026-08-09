@@ -42,55 +42,55 @@ export default function GameTimer({
 
   return (
     <div
-      className={`card p-3 transition-all ${
+      className={`flex items-center justify-between p-2 rounded-md transition-all bg-[var(--bg-card)] ${
         isActive ? "ring-2 ring-[var(--accent)]" : "opacity-90"
       }`}
     >
-      <div className="flex items-center justify-between mb-2 gap-2">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="flex flex-col min-w-0">
+        <div className="flex items-center gap-2">
           <span className="text-lg shrink-0">{playerColor === "w" ? "♔" : "♚"}</span>
           <span className="font-medium text-sm truncate">
             {playerName || (playerColor === "w" ? "White" : "Black")}
           </span>
+          {typeof rating === "number" && (
+            <span className="text-xs text-[var(--text-muted)] shrink-0">({rating})</span>
+          )}
           {isYou && <span className="text-[10px] text-[var(--text-muted)] shrink-0">(you)</span>}
         </div>
-        {typeof rating === "number" && (
-          <span className="text-xs text-[var(--text-muted)] shrink-0">{rating}</span>
-        )}
+        <div className="flex items-center gap-0.5 flex-wrap min-h-[20px] mt-1">
+          {captured.map((p, i) => (
+            <span key={i} className="text-sm leading-none">
+              {pieceToUnicode[p] ?? p}
+            </span>
+          ))}
+          {materialDiff > 0 && (
+            <span className="text-xs text-[var(--text-muted)] ml-1">+{materialDiff}</span>
+          )}
+        </div>
       </div>
 
-      <div
-        className={`timer text-3xl font-bold text-center py-2 px-3 rounded-md ${
-          isCritical && isActive
-            ? "bg-red-900/50 text-red-400 animate-pulse"
-            : isLow && isActive
-            ? "bg-yellow-900/30 text-yellow-400"
-            : isActive
-            ? "bg-[var(--bg-input)] text-[var(--text-primary)]"
-            : "bg-[var(--bg-dark)] text-[var(--text-secondary)]"
-        }`}
-      >
-        {formatTime(seconds)}
-      </div>
-
-      <div className="mt-2 h-1 rounded-full bg-[var(--bg-dark)] overflow-hidden">
+      <div className="flex flex-col items-end">
         <div
-          className={`h-full transition-all duration-500 rounded-full ${
-            isCritical ? "bg-red-500" : isLow ? "bg-yellow-500" : "bg-green-500"
+          className={`timer text-3xl font-bold font-mono text-center py-1 px-4 rounded-md shadow-inner ${
+            isCritical && isActive
+              ? "bg-red-900/50 text-red-400 animate-pulse"
+              : isLow && isActive
+              ? "bg-yellow-900/30 text-yellow-400"
+              : isActive
+              ? "bg-[var(--bg-input)] text-[var(--text-primary)] bg-[#2a2a2a]"
+              : "bg-[#1f1f1f] text-[var(--text-secondary)]"
           }`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-
-      <div className="mt-2 flex items-center gap-0.5 flex-wrap min-h-[20px]">
-        {captured.map((p, i) => (
-          <span key={i} className="text-base leading-none">
-            {pieceToUnicode[p] ?? p}
-          </span>
-        ))}
-        {materialDiff > 0 && (
-          <span className="text-xs text-[var(--text-muted)] ml-1">+{materialDiff}</span>
-        )}
+        >
+          {formatTime(seconds)}
+        </div>
+        <div className="w-full h-1 mt-1 rounded-full bg-black/50 overflow-hidden">
+          <div
+            className={`h-full transition-all duration-500 rounded-full ${
+              isCritical ? "bg-red-500" : isLow ? "bg-yellow-500" : "bg-green-500"
+            }`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
       </div>
     </div>
   );
