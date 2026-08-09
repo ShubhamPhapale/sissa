@@ -70,6 +70,7 @@ export default function AnalysisClient() {
       });
       evtSource = new EventSource(`/api/analysis/stream?${query.toString()}`);
 
+      let isDone = false;
       evtSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
@@ -78,6 +79,7 @@ export default function AnalysisClient() {
           } else if (data.type === "progress") {
             setAnalysis(data);
           } else if (data.type === "done") {
+            isDone = true;
             setAnalysis(data);
             evtSource?.close();
           }
@@ -87,6 +89,7 @@ export default function AnalysisClient() {
       };
 
       evtSource.onerror = () => {
+        if (isDone) return;
         setAnalysisError("Connection to analysis engine lost.");
         evtSource?.close();
       };
@@ -112,10 +115,11 @@ export default function AnalysisClient() {
   }, [analysis]);
 
   const bestMoveArrow = useMemo(() => {
-    if (analysis && analysis.bestMove && analysis.bestMove.length >= 4) {
+    const bMove = analysis?.bestMove || (analysis?.pv && analysis.pv[0]);
+    if (bMove && bMove.length >= 4) {
       return {
-        from: analysis.bestMove.substring(0, 2),
-        to: analysis.bestMove.substring(2, 4),
+        from: bMove.substring(0, 2),
+        to: bMove.substring(2, 4),
         color: "rgba(0, 128, 255, 0.7)", // blue arrow
       };
     }

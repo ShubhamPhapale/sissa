@@ -38,8 +38,11 @@ export default function GameAnalysis({
   const [selectedMove, setSelectedMove] = useState<MoveClassification | null>(null);
 
   React.useEffect(() => {
-    if (initialAnalysis) setAnalysis(initialAnalysis);
-  }, [initialAnalysis]);
+    if (initialAnalysis) {
+      setAnalysis(initialAnalysis);
+      onAnalysisComplete?.(initialAnalysis);
+    }
+  }, [initialAnalysis, onAnalysisComplete]);
 
   const handleAnalyze = async () => {
     setIsAnalyzing(true);

@@ -269,10 +269,11 @@ export default function GameClient() {
     }
 
     // 2. Live Engine Analysis (blue arrow)
-    if (analysis && analysis.bestMove && analysis.bestMove.length >= 4) {
+    const liveMove = analysis?.bestMove || (analysis?.pv && analysis.pv[0]);
+    if (liveMove && liveMove.length >= 4) {
       return {
-        from: analysis.bestMove.substring(0, 2),
-        to: analysis.bestMove.substring(2, 4),
+        from: liveMove.substring(0, 2),
+        to: liveMove.substring(2, 4),
         color: "rgba(0, 128, 255, 0.7)",
       };
     }
@@ -293,6 +294,7 @@ export default function GameClient() {
     setAnalysisError(null);
 
     let eventSource: EventSource | null = null;
+    let isDone = false;
     const timeout = window.setTimeout(() => {
       eventSource = new EventSource(`/api/analysis/stream?fen=${encodeURIComponent(displayFen)}&depth=${analysisDepth}`);
       eventSource.onmessage = (e) => {
@@ -305,6 +307,7 @@ export default function GameClient() {
           if (data.type === 'progress' || data.type === 'done') {
             setAnalysis((prev) => ({ ...prev, ...data } as StockfishAnalysis));
             if (data.type === 'done') {
+              isDone = true;
               setAnalysisLoading(false);
               eventSource?.close();
             }
@@ -314,7 +317,7 @@ export default function GameClient() {
         }
       };
       eventSource.onerror = () => {
-        if (cancelled) return;
+        if (cancelled || isDone) return;
         setAnalysisError("Analysis unavailable");
         setAnalysisLoading(false);
         eventSource?.close();
