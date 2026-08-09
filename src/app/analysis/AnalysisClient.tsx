@@ -114,14 +114,14 @@ export default function AnalysisClient() {
     return `${Math.max(0, Math.min(100, 50 + score * 5))}%`;
   }, [analysis]);
 
-  const bestMoveArrow = useMemo(() => {
+  const bestMoveArrows = useMemo(() => {
     const bMove = analysis?.bestMove || (analysis?.pv && analysis.pv[0]);
-    if (bMove && bMove.length >= 4) {
-      return {
+    if (bMove && bMove.length >= 4 && bMove !== "(none)") {
+      return [{
         from: bMove.substring(0, 2),
         to: bMove.substring(2, 4),
         color: "rgba(0, 128, 255, 0.7)", // blue arrow
-      };
+      }];
     }
     return null;
   }, [analysis]);
@@ -211,7 +211,7 @@ export default function AnalysisClient() {
                   boardFlipped={boardFlipped}
                   interactive={true}
                   allowBothColors={true}
-                  bestMoveArrow={bestMoveArrow}
+                  bestMoveArrows={bestMoveArrows}
                 />
               </div>
             </div>

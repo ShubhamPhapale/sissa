@@ -495,7 +495,6 @@ export default function GameClient() {
   }, [optimistic, moves]);
 
   const currentClassification = useMemo(() => {
-    if (engineEnabled && analysis?.classification) return analysis.classification;
     if (!fullGameAnalysis) return null;
     const activePly = viewPly !== null ? viewPly : moves.length - 1;
     if (activePly >= 0 && activePly < fullGameAnalysis.moves.length) {
@@ -880,7 +879,7 @@ export default function GameClient() {
                       interactive={Boolean((isMyTurn && isLiveView && !isSpectator) || gameOver)}
                       allowBothColors={gameOver}
                       lastMoveClassification={currentClassification}
-                      bestMoveArrow={bestMoveArrow}
+                      bestMoveArrows={bestMoveArrows}
                     />
                   </div>
                 </div>

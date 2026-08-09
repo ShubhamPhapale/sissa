@@ -204,15 +204,14 @@ export async function analyzeGame(
       classifications.push({
         ply: i,
         san: move.san || "",
-        fenBefore: fenBeforeMove,
-        fenAfter: currentFen,
-        classification,
+        fen: fenBeforeMove,
         evalBefore,
         evalAfter,
-        isMate: afterIsMate,
-        accuracy: Math.round(acc * 10) / 10,
-        bestMove: bestMoveForThisTurn ?? undefined,
-        bestMoveSan: bestMoveSanForThisTurn ?? undefined,
+        bestMove: bestMoveForThisTurn,
+        bestEval: evalAfter,
+        cpLoss: Math.abs(evalBefore - evalAfter),
+        classification,
+        isMate: afterIsMate || previousIsMate,
       });
 
       // Update for next iteration
