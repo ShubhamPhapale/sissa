@@ -43,23 +43,23 @@ export interface ClassificationCounts {
 }
 
 export const CLASSIFICATION_COLORS: Record<string, string> = {
-  brilliant: "#26c6da",
-  great: "#66bb6a",
-  best: "#43a047",
-  excellent: "#81c784",
-  good: "#a5d6a7",
-  book: "#90a4ae",
-  inaccuracy: "#ffd54f",
-  mistake: "#ff9800",
-  blunder: "#f44336",
+  brilliant: "#1baca6",
+  great: "#5c8bb0",
+  best: "#81b64c",
+  excellent: "#96bc4b",
+  good: "#96bc4b",
+  book: "#a88865",
+  inaccuracy: "#f0c15c",
+  mistake: "#e58f39",
+  blunder: "#ca3431",
 };
 
 export const CLASSIFICATION_ICONS: Record<string, string> = {
   brilliant: "!!",
   great: "!",
   best: "★",
-  excellent: "👍",
-  good: "✔",
+  excellent: "✓",
+  good: "✓",
   book: "📖",
   inaccuracy: "?!",
   mistake: "?",

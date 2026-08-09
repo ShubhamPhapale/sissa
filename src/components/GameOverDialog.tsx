@@ -36,14 +36,7 @@ export default function GameOverDialog({
   const [dismissed, setDismissed] = useState(false);
 
   if (dismissed) {
-    return (
-      <button
-        onClick={() => setDismissed(false)}
-        className="absolute top-2 right-2 z-50 btn btn-secondary text-xs"
-      >
-        Show result
-      </button>
-    );
+    return null;
   }
 
   const winnerName = winner === "w" ? whiteName : winner === "b" ? blackName : null;

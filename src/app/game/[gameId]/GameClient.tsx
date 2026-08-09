@@ -838,7 +838,7 @@ export default function GameClient() {
 
           <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:items-start lg:justify-center w-full max-w-[1250px] mx-auto px-2 sm:px-4">
             {/* Board */}
-            <div className="w-full flex flex-col items-center order-1 lg:order-1" style={{ maxWidth: 'min(800px, calc(100vh - 120px))' }}>
+            <div className="w-full flex flex-col items-center order-1 lg:order-1" style={{ maxWidth: 'min(800px, calc(100vh - 140px))' }}>
               <div className="w-full flex flex-col gap-1">
                 {/* Top Timer */}
                 <div className="w-full flex">
@@ -1004,7 +1004,7 @@ export default function GameClient() {
             </div>
 
             {/* Right column */}
-            <div className="w-full lg:w-[320px] xl:w-[380px] shrink-0 flex flex-col gap-4 order-2 lg:order-2 lg:sticky lg:top-4 lg:self-start lg:h-[calc(100vh-2rem)] move-history">
+            <div className="w-full lg:w-[320px] xl:w-[380px] shrink-0 flex flex-col gap-4 order-2 lg:order-2 lg:sticky lg:top-4 lg:self-start lg:h-[calc(100vh-140px)] move-history">
               {/* Game Review Coach Bubble */}
               {fullGameAnalysis && (() => {
                 const activeIndex = optimistic?.plies != null ? optimistic.plies - 1 : (viewPly ?? moves.length - 1);
@@ -1015,9 +1015,9 @@ export default function GameClient() {
                   const icon = CLASSIFICATION_ICONS[cls as keyof typeof CLASSIFICATION_ICONS] || "";
                   
                   return (
-                    <div className="card p-4 border border-transparent shadow-lg bg-gradient-to-b from-[#1e1e1e] to-[var(--bg-card)]">
+                    <div className="card p-4 border border-[var(--border)] shadow-sm bg-[var(--bg-card)]">
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full text-white text-xl bg-[#2a2a2a] border-2" style={{ borderColor: color }}>
+                        <div className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full text-white text-xl bg-[var(--bg-main)] border-2 font-bold" style={{ borderColor: color, color }}>
                           {icon}
                         </div>
                         <div>
