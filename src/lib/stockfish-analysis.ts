@@ -1,4 +1,4 @@
-import { fork, ChildProcess } from "child_process";
+import type { Worker } from "worker_threads";
 import path from "path";
 
 export interface StockfishAnalysis {
@@ -16,7 +16,7 @@ export type SanTranslator = (moves: string[]) => string[];
 class StockfishSingleton {
   private static instance: StockfishSingleton;
   
-  private process: ChildProcess | null = null;
+  private worker: Worker | null = null;
   private isProcessing = false;
   private queue: Array<{ fen: string; depth: number; translateSan?: SanTranslator; resolve: (res: StockfishAnalysis | null) => void }> = [];
   
@@ -42,30 +42,32 @@ class StockfishSingleton {
     if (this.initPromise) return this.initPromise;
 
     this.initPromise = new Promise((resolveInit) => {
-      // Spawn worker
+      // Spawn worker_thread instead of full Node process to save memory
       const workerPath = path.resolve(process.cwd(), "stockfish-worker.mjs");
-      const forkFn = eval('require("child_process").fork');
-      this.process = forkFn(workerPath);
+      const WorkerClass = eval('require("worker_threads").Worker');
+      this.worker = new WorkerClass(workerPath);
 
-      this.process!.on("message", (msg: string) => {
+      this.worker!.on("message", (msg: string) => {
         if (msg === "STOCKFISH_READY") {
-          this.process!.send("uci");
-          this.process!.send("setoption name MultiPV value 1");
-          this.process!.send("setoption name UCI_ShowWDL value true");
-          this.process!.send("isready");
+          this.worker!.postMessage("uci");
+          this.worker!.postMessage("setoption name Hash value 16"); // Explicitly limit RAM to 16MB
+          this.worker!.postMessage("setoption name Threads value 1"); // Ensure single threaded
+          this.worker!.postMessage("setoption name MultiPV value 1");
+          this.worker!.postMessage("setoption name UCI_ShowWDL value true");
+          this.worker!.postMessage("isready");
           resolveInit();
         } else {
           this.handleEngineMessage(msg);
         }
       });
       
-      this.process!.on("error", (err) => {
-        console.error("Stockfish process error:", err);
+      this.worker!.on("error", (err) => {
+        console.error("Stockfish worker error:", err);
       });
       
-      this.process!.on("exit", (code) => {
-        if (code !== 0) console.error("Stockfish exited with code", code);
-        this.process = null;
+      this.worker!.on("exit", (code) => {
+        if (code !== 0) console.error("Stockfish worker exited with code", code);
+        this.worker = null;
         this.initPromise = null;
         // clear current
         if (this.currentResolve) {
@@ -183,19 +185,19 @@ class StockfishSingleton {
     try {
       await this.initialize();
       
-      if (!this.process) {
-        throw new Error("Engine process not available");
+      if (!this.worker) {
+        throw new Error("Engine worker not available");
       }
 
-      this.process.send(`position fen ${item.fen}`);
+      this.worker.postMessage(`position fen ${item.fen}`);
       // Add movetime to ensure the engine always terminates eventually, 
       // preventing the WASM event loop from blocking indefinitely.
-      this.process.send(`go depth ${item.depth} movetime 10000`);
+      this.worker.postMessage(`go depth ${item.depth} movetime 10000`);
 
       // Allow 10 seconds maximum for a deeper search
       this.currentTimeout = setTimeout(() => {
         if (this.currentResolve) {
-          this.process?.send("stop");
+          this.worker?.postMessage("stop");
           // wait for bestmove to trigger resolve
         }
       }, 10000);
