@@ -1,4 +1,4 @@
-import type { Worker } from "worker_threads";
+import { fork, ChildProcess } from "child_process";
 import path from "path";
 
 export interface StockfishAnalysis {
@@ -16,7 +16,7 @@ export type SanTranslator = (moves: string[]) => string[];
 class StockfishSingleton {
   private static instance: StockfishSingleton;
   
-  private worker: Worker | null = null;
+  private worker: ChildProcess | null = null;
   private isProcessing = false;
   private queue: Array<{ fen: string; depth: number; translateSan?: SanTranslator; resolve: (res: StockfishAnalysis | null) => void }> = [];
   
@@ -42,19 +42,21 @@ class StockfishSingleton {
     if (this.initPromise) return this.initPromise;
 
     this.initPromise = new Promise((resolveInit) => {
-      // Spawn worker_thread instead of full Node process to save memory
+      // Spawn worker process with strict memory limit to avoid 512MB RAM cap on Render free tier
       const workerPath = path.resolve(process.cwd(), "stockfish-worker.mjs");
-      const WorkerClass = eval('require("worker_threads").Worker');
-      this.worker = new WorkerClass(workerPath);
+      const forkFn = eval('require("child_process").fork');
+      this.worker = forkFn(workerPath, [], {
+        execArgv: ["--max-old-space-size=64"],
+      });
 
       this.worker!.on("message", (msg: string) => {
         if (msg === "STOCKFISH_READY") {
-          this.worker!.postMessage("uci");
-          this.worker!.postMessage("setoption name Hash value 16"); // Explicitly limit RAM to 16MB
-          this.worker!.postMessage("setoption name Threads value 1"); // Ensure single threaded
-          this.worker!.postMessage("setoption name MultiPV value 1");
-          this.worker!.postMessage("setoption name UCI_ShowWDL value true");
-          this.worker!.postMessage("isready");
+          this.worker!.send("uci");
+          this.worker!.send("setoption name Hash value 16"); // Explicitly limit RAM to 16MB
+          this.worker!.send("setoption name Threads value 1"); // Ensure single threaded
+          this.worker!.send("setoption name MultiPV value 1");
+          this.worker!.send("setoption name UCI_ShowWDL value true");
+          this.worker!.send("isready");
           resolveInit();
         } else {
           this.handleEngineMessage(msg);
@@ -186,18 +188,18 @@ class StockfishSingleton {
       await this.initialize();
       
       if (!this.worker) {
-        throw new Error("Engine worker not available");
+        throw new Error("Engine process not available");
       }
 
-      this.worker.postMessage(`position fen ${item.fen}`);
+      this.worker.send(`position fen ${item.fen}`);
       // Add movetime to ensure the engine always terminates eventually, 
       // preventing the WASM event loop from blocking indefinitely.
-      this.worker.postMessage(`go depth ${item.depth} movetime 10000`);
+      this.worker.send(`go depth ${item.depth} movetime 10000`);
 
       // Allow 10 seconds maximum for a deeper search
       this.currentTimeout = setTimeout(() => {
         if (this.currentResolve) {
-          this.worker?.postMessage("stop");
+          this.worker?.send("stop");
           // wait for bestmove to trigger resolve
         }
       }, 10000);
