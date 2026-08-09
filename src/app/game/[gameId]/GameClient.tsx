@@ -76,15 +76,28 @@ function replayTo(moveList: ApiMove[], ply: number): GameState {
     const from = algebraicToSquare(m.from);
     const to = algebraicToSquare(m.to);
     const legal = generateLegalMoves(state, state.turn);
-    const found = legal.find(
+    let found = legal.find(
       (c) =>
         c.from.row === from.row &&
         c.from.col === from.col &&
         c.to.row === to.row &&
         c.to.col === to.col &&
-        (m.promotion ? c.promotion === m.promotion : !c.promotion)
+        (m.promotion ? c.promotion?.toLowerCase() === m.promotion.toLowerCase() : !c.promotion)
     );
-    if (!found) break;
+    if (!found) {
+      console.warn("Move not found in legal moves! Forcing fallback:", m);
+      found = {
+        from,
+        to,
+        piece: m.piece as any,
+        captured: m.captured as any,
+        promotion: (m.promotion as any) || undefined,
+        check: m.check,
+        checkmate: m.checkmate,
+        enPassant: m.enPassant,
+        castle: (m.castle as any) || undefined,
+      };
+    }
     state = makeMove(state, found);
   }
   return state;
