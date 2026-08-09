@@ -253,6 +253,33 @@ export default function GameClient() {
 
   const displayFen = useMemo(() => stateToFEN(displayState), [displayState]);
 
+  const bestMoveArrow = useMemo(() => {
+    const activePly = viewPly !== null ? viewPly : moves.length - 1;
+    
+    // 1. Game Review takes precedence (green arrow)
+    if (fullGameAnalysis && activePly + 1 < fullGameAnalysis.moves.length) {
+      const bMove = fullGameAnalysis.moves[activePly + 1].bestMove;
+      if (bMove && bMove.length >= 4) {
+        return {
+          from: bMove.substring(0, 2),
+          to: bMove.substring(2, 4),
+          color: "rgba(102, 187, 106, 0.8)",
+        };
+      }
+    }
+
+    // 2. Live Engine Analysis (blue arrow)
+    if (analysis && analysis.bestMove && analysis.bestMove.length >= 4) {
+      return {
+        from: analysis.bestMove.substring(0, 2),
+        to: analysis.bestMove.substring(2, 4),
+        color: "rgba(0, 128, 255, 0.7)",
+      };
+    }
+
+    return null;
+  }, [fullGameAnalysis, analysis, viewPly, moves.length]);
+
   useEffect(() => {
     if (!game) return;
     if (game.status === "playing") {
@@ -614,7 +641,7 @@ export default function GameClient() {
 
           <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 lg:items-start lg:justify-center">
             {/* Left column */}
-            <div className="w-full max-w-[280px] flex flex-col gap-6 shrink-0 order-2 lg:order-1">
+            <div className="w-full lg:w-[240px] xl:w-[280px] shrink-0 flex flex-col gap-6 order-2 lg:order-1">
               <GameControls
                 onResign={() => doAction("resign")}
                 onOfferDraw={() => doAction("offer-draw")}
@@ -631,7 +658,7 @@ export default function GameClient() {
             </div>
 
             {/* Board */}
-            <div className="flex-1 w-full max-w-[680px] flex flex-col items-center order-1 lg:order-2">
+            <div className="w-full flex flex-col items-center order-1 lg:order-2" style={{ maxWidth: 'min(680px, calc(100vh - 180px))' }}>
               <div className="w-full flex flex-col gap-2">
                 {/* Top Timer */}
                 <div className="w-full flex">
@@ -669,6 +696,7 @@ export default function GameClient() {
                       interactive={Boolean((isMyTurn && isLiveView && !isSpectator) || gameOver)}
                       allowBothColors={gameOver}
                       lastMoveClassification={currentClassification}
+                      bestMoveArrow={bestMoveArrow}
                     />
                   </div>
                 </div>
@@ -760,7 +788,7 @@ export default function GameClient() {
             </div>
 
             {/* Right column */}
-            <div className="w-full max-w-[320px] flex flex-col gap-4 shrink-0 lg:sticky lg:top-4 order-3">
+            <div className="w-full lg:w-[260px] xl:w-[320px] shrink-0 flex flex-col gap-4 order-3 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto move-history">
               <MoveHistory
                 moves={displayMoves.map((m) => ({ san: m.san, check: m.check, checkmate: m.checkmate }))}
                 activeMoveIndex={optimistic?.plies != null ? optimistic.plies - 1 : (viewPly ?? moves.length - 1)}

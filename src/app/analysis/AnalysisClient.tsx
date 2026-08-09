@@ -77,6 +77,9 @@ export default function AnalysisClient() {
             setAnalysisLoading(false);
           } else if (data.type === "progress") {
             setAnalysis(data);
+          } else if (data.type === "done") {
+            setAnalysis(data);
+            evtSource?.close();
           }
         } catch (err) {
           console.error("Parse error", err);
@@ -106,6 +109,17 @@ export default function AnalysisClient() {
     const score = Number(analysis.scoreText);
     if (!Number.isFinite(score)) return "50%";
     return `${Math.max(0, Math.min(100, 50 + score * 5))}%`;
+  }, [analysis]);
+
+  const bestMoveArrow = useMemo(() => {
+    if (analysis && analysis.bestMove && analysis.bestMove.length >= 4) {
+      return {
+        from: analysis.bestMove.substring(0, 2),
+        to: analysis.bestMove.substring(2, 4),
+        color: "rgba(0, 128, 255, 0.7)", // blue arrow
+      };
+    }
+    return null;
   }, [analysis]);
 
   const handleMove = (m: Move) => {
@@ -156,7 +170,7 @@ export default function AnalysisClient() {
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 lg:items-start lg:justify-center">
           
           {/* Board Area */}
-          <div className="flex-1 w-full max-w-[680px] flex flex-col items-center">
+          <div className="w-full flex flex-col items-center" style={{ maxWidth: 'min(680px, calc(100vh - 180px))' }}>
             <div className="flex flex-row items-stretch gap-2 w-full">
               <div className="w-4 rounded bg-[#333] overflow-hidden flex flex-col-reverse shadow-inner shrink-0 relative">
                 <div 
@@ -173,6 +187,7 @@ export default function AnalysisClient() {
                   boardFlipped={boardFlipped}
                   interactive={true}
                   allowBothColors={true}
+                  bestMoveArrow={bestMoveArrow}
                 />
               </div>
             </div>
@@ -213,7 +228,7 @@ export default function AnalysisClient() {
           </div>
 
           {/* Right Column: History & Stockfish */}
-          <div className="w-full max-w-[320px] flex flex-col gap-4 shrink-0 lg:sticky lg:top-4">
+          <div className="w-full lg:w-[260px] xl:w-[320px] shrink-0 flex flex-col gap-4 lg:sticky lg:top-4">
             <MoveHistory
               moves={moves.map(m => ({ san: m.san, check: m.check, checkmate: m.checkmate }))}
               activeMoveIndex={activePly}

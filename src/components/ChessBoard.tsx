@@ -30,6 +30,8 @@ interface ChessBoardProps {
   allowBothColors?: boolean;
   /** Classification of the last move to show as a badge. */
   lastMoveClassification?: string | null;
+  /** Best move arrow to display. {from: string, to: string, color?: string} */
+  bestMoveArrow?: { from: string; to: string; color?: string } | null;
 }
 
 export default function ChessBoard({
@@ -41,6 +43,7 @@ export default function ChessBoard({
   interactive = true,
   allowBothColors = false,
   lastMoveClassification = null,
+  bestMoveArrow = null,
 }: ChessBoardProps) {
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [legalMoves, setLegalMoves] = useState<Move[]>([]);
@@ -280,6 +283,67 @@ export default function ChessBoard({
             })}
           </div>
         </div>
+      )}
+
+      {/* SVG Layer for Arrows */}
+      {bestMoveArrow && (
+        <svg
+          className="absolute inset-0 pointer-events-none z-20"
+          width="100%"
+          height="100%"
+          viewBox="0 0 100 100"
+        >
+          <defs>
+            <marker
+              id="arrowhead"
+              markerWidth="4"
+              markerHeight="4"
+              refX="3"
+              refY="2"
+              orient="auto"
+            >
+              <polygon points="0 0, 4 2, 0 4" fill={bestMoveArrow.color || "rgba(0, 128, 255, 0.7)"} />
+            </marker>
+          </defs>
+          {(() => {
+            const sqFrom = algebraicToSquare(bestMoveArrow.from);
+            const sqTo = algebraicToSquare(bestMoveArrow.to);
+
+            let x1 = sqFrom.col * 12.5 + 6.25;
+            let y1 = sqFrom.row * 12.5 + 6.25;
+            let x2 = sqTo.col * 12.5 + 6.25;
+            let y2 = sqTo.row * 12.5 + 6.25;
+
+            if (flipped) {
+              x1 = (7 - sqFrom.col) * 12.5 + 6.25;
+              y1 = (7 - sqFrom.row) * 12.5 + 6.25;
+              x2 = (7 - sqTo.col) * 12.5 + 6.25;
+              y2 = (7 - sqTo.row) * 12.5 + 6.25;
+            }
+
+            // Adjust x2, y2 to shorten the line slightly so arrowhead doesn't cover the center
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            const shorten = 3.5;
+            const nx = x2 - (dx / len) * shorten;
+            const ny = y2 - (dy / len) * shorten;
+
+            return (
+              <line
+                x1={x1}
+                y1={y1}
+                x2={nx}
+                y2={ny}
+                stroke={bestMoveArrow.color || "rgba(0, 128, 255, 0.7)"}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                markerEnd="url(#arrowhead)"
+                opacity="0.8"
+              />
+            );
+          })()}
+        </svg>
       )}
     </div>
   );
