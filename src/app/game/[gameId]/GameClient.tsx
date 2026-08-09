@@ -333,6 +333,11 @@ export default function GameClient() {
 
   const displayFen = useMemo(() => stateToFEN(displayState), [displayState]);
 
+  const isLiveView = viewPly === null;
+  const gameActive = game?.status === "playing";
+  const gameOver = game?.status === "finished";
+  const isMyTurn = Boolean(gameActive && myColor && game?.turn === myColor && !optimistic);
+
   const bestMoveArrow = useMemo(() => {
     if (!gameOver) return undefined;
     const activePly = viewPly !== null ? viewPly : moves.length - 1;
@@ -413,11 +418,6 @@ export default function GameClient() {
       eventSource?.close();
     };
   }, [displayFen, gameId, viewPly, analysisDepth, engineEnabled, game?.status]);
-
-  const isLiveView = viewPly === null;
-  const gameActive = game?.status === "playing";
-  const gameOver = game?.status === "finished";
-  const isMyTurn = Boolean(gameActive && myColor && game?.turn === myColor && !optimistic);
 
   const displayMoves = useMemo(() => {
     if (optimistic) {
