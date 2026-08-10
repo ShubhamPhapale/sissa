@@ -74,17 +74,34 @@ function expectedScore(a: number, b: number): number {
   return 1 / (1 + Math.pow(10, (b - a) / 400));
 }
 
-/** Standard Elo update with K=32. */
+/** Standard Elo update with dynamic K-factors (FIDE-like). */
 export function eloUpdate(
   whiteRating: number,
   blackRating: number,
-  winner: "w" | "b" | "draw"
+  winner: "w" | "b" | "draw",
+  whiteGames: number = 30,
+  blackGames: number = 30
 ): { white: number; black: number } {
-  const K = 32;
+  const getK = (rating: number, gamesPlayed: number) => {
+    // High K factor for provisional players (first 15 games), mimics Glicko-2 large rating deviation
+    if (gamesPlayed < 15) return 60;
+    if (rating < 2000) return 32;
+    if (rating < 2400) return 24;
+    return 16;
+  };
+
+  const kW = getK(whiteRating, whiteGames);
+  const kB = getK(blackRating, blackGames);
+
   const scoreWhite = winner === "w" ? 1 : winner === "draw" ? 0.5 : 0;
+  const scoreBlack = winner === "b" ? 1 : winner === "draw" ? 0.5 : 0;
+
   const expWhite = expectedScore(whiteRating, blackRating);
-  const newWhite = Math.round(whiteRating + K * (scoreWhite - expWhite));
-  const newBlack = Math.round(blackRating + K * ((1 - scoreWhite) - (1 - expWhite)));
+  const expBlack = 1 - expWhite;
+
+  const newWhite = Math.round(whiteRating + kW * (scoreWhite - expWhite));
+  const newBlack = Math.round(blackRating + kB * (scoreBlack - expBlack));
+
   return { white: newWhite, black: newBlack };
 }
 
@@ -132,7 +149,10 @@ export async function finalizeGame(
 
       const ratingKey = (ratingType + "Rating") as "bulletRating" | "blitzRating" | "rapidRating" | "classicalRating";
 
-      const next = eloUpdate(white[ratingKey], black[ratingKey], winner);
+      const whiteGames = (white.wins || 0) + (white.losses || 0) + (white.draws || 0);
+      const blackGames = (black.wins || 0) + (black.losses || 0) + (black.draws || 0);
+
+      const next = eloUpdate(white[ratingKey], black[ratingKey], winner, whiteGames, blackGames);
       await db
         .update(users)
         .set({

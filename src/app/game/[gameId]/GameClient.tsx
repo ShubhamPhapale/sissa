@@ -1123,24 +1123,6 @@ export default function GameClient() {
                 return null;
               })()}
 
-              <MoveHistory
-                moves={displayMoves.map((m) => ({ san: m.san, check: m.check, checkmate: m.checkmate }))}
-                activeMoveIndex={optimistic?.plies != null ? optimistic.plies - 1 : (viewPly ?? moves.length - 1)}
-                onMoveClick={(i) => {
-                  if (optimistic) {
-                    if (i < optimistic.basePly) {
-                      setViewPly(i === moves.length - 1 ? null : i);
-                      setOptimistic(null);
-                    } else {
-                      setOptimistic({ ...optimistic, plies: i + 1 });
-                    }
-                  } else {
-                    setViewPly(i === moves.length - 1 ? null : i);
-                  }
-                }}
-                className="flex-1 min-h-0"
-              />
-
               {gameOver && (
                 <div className="card p-3 shrink-0">
                   <div className="flex items-center justify-between gap-2 mb-2">
@@ -1207,6 +1189,25 @@ export default function GameClient() {
                 )}
                 </div>
               )}
+
+              <MoveHistory
+                moves={displayMoves.map((m) => ({ san: m.san, check: m.check, checkmate: m.checkmate }))}
+                activeMoveIndex={optimistic?.plies != null ? optimistic.plies - 1 : (viewPly ?? moves.length - 1)}
+                onMoveClick={(i) => {
+                  if (optimistic) {
+                    if (i < optimistic.basePly) {
+                      setViewPly(i === moves.length - 1 ? null : i);
+                      setOptimistic(null);
+                    } else {
+                      setOptimistic({ ...optimistic, plies: i + 1 });
+                    }
+                  } else {
+                    setViewPly(i === moves.length - 1 ? null : i);
+                  }
+                }}
+                className="flex-1 min-h-0"
+              />
+
 
               <div className="card p-3">
                 <h4 className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">
