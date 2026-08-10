@@ -56,11 +56,17 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
               Member since {new Date(user.createdAt).toLocaleDateString()}
             </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
               <StatBox title="Bullet" value={user.bulletRating} icon="🚀" />
               <StatBox title="Blitz" value={user.blitzRating} icon="⚡" />
               <StatBox title="Rapid" value={user.rapidRating} icon="⏱️" />
               <StatBox title="Classical" value={user.classicalRating} icon="🐢" />
+            </div>
+
+            <h3 className="text-xl font-bold mb-4">Rating Trends</h3>
+            <div className="card bg-[var(--bg-input)] border-transparent p-6 mb-12 flex flex-col items-center justify-center text-[var(--text-muted)] min-h-[200px]">
+              <div className="text-3xl mb-2">📈</div>
+              <p>Not enough rated games played to show rating trends yet.</p>
             </div>
           </div>
           
@@ -155,9 +161,12 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
                       }
                       
                       const tcText = game.timeControl < 60 ? `${game.timeControl}s` : `${game.timeControl / 60} min`;
+                      
+                      const whiteRating = isWhite ? (tcName === "Bullet" ? user.bulletRating : tcName === "Blitz" ? user.blitzRating : tcName === "Rapid" ? user.rapidRating : user.classicalRating) : "?";
+                      const blackRating = !isWhite ? (tcName === "Bullet" ? user.bulletRating : tcName === "Blitz" ? user.blitzRating : tcName === "Rapid" ? user.rapidRating : user.classicalRating) : "?";
 
                       return (
-                        <tr key={game.id} className="hover:bg-white/[0.03] transition-colors group">
+                        <tr key={game.id} className="hover:bg-white/[0.03] transition-colors group cursor-pointer">
                           <td className="p-3 pl-6">
                             <div className="flex flex-col items-center justify-center text-[var(--text-secondary)]">
                               <span className="text-xl leading-none mb-1">{icon}</span>
@@ -166,13 +175,13 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
                           </td>
                           <td className="p-3">
                             <Link href={`/game/${game.id}`} className="flex flex-col gap-1 group-hover:opacity-80 transition-opacity">
-                              <div className={`flex items-center gap-2 ${isWhite ? "font-bold text-[var(--text-primary)]" : "text-[var(--text-secondary)]"}`}>
-                                <div className="w-3 h-3 bg-white border border-gray-400 rounded-sm shadow-sm" />
-                                <span>{game.whitePlayerName || "Anonymous"}</span>
+                              <div className="flex items-center gap-2 text-[var(--text-primary)]">
+                                <div className="w-3 h-3 bg-white border border-gray-400 rounded-sm shadow-sm shrink-0" />
+                                <span className="truncate">{game.whitePlayerName || "Anonymous"} <span className="text-[var(--text-muted)] text-xs font-normal">({whiteRating})</span></span>
                               </div>
-                              <div className={`flex items-center gap-2 ${!isWhite ? "font-bold text-[var(--text-primary)]" : "text-[var(--text-secondary)]"}`}>
-                                <div className="w-3 h-3 bg-[#2b2b2b] border border-[#111] rounded-sm shadow-sm" />
-                                <span>{game.blackPlayerName || "Anonymous"}</span>
+                              <div className="flex items-center gap-2 text-[var(--text-primary)]">
+                                <div className="w-3 h-3 bg-[#2b2b2b] border border-[#111] rounded-sm shadow-sm shrink-0" />
+                                <span className="truncate">{game.blackPlayerName || "Anonymous"} <span className="text-[var(--text-muted)] text-xs font-normal">({blackRating})</span></span>
                               </div>
                             </Link>
                           </td>
@@ -222,13 +231,13 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
 function StatBox({ title, value, icon }: { title: string; value: number; icon: React.ReactNode }) {
   return (
-    <div className="card bg-[#1b1917]/50 border-transparent p-4 flex flex-col h-full rounded-xl hover:bg-[#1b1917]/80 transition-colors">
-      <div className="flex items-start gap-4 mb-2">
-        <div className="text-4xl">{icon}</div>
+    <div className="card bg-[var(--bg-input)] border-transparent p-4 flex flex-col h-full rounded-xl hover:bg-[var(--border)] transition-colors">
+      <div className="flex items-start gap-3 sm:gap-4 mb-2">
+        <div className="text-3xl sm:text-4xl">{icon}</div>
         <div className="flex flex-col">
-          <div className="text-sm font-semibold text-[#a3a3a3]">{title}</div>
-          <div className="flex items-baseline gap-2">
-            <div className="text-3xl font-bold text-white tracking-tight">
+          <div className="text-xs sm:text-sm font-semibold text-[var(--text-muted)]">{title}</div>
+          <div className="flex items-baseline gap-2 mt-1">
+            <div className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] tracking-tight">
               {value === 1500 ? "?" : value}
             </div>
           </div>
