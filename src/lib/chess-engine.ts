@@ -746,8 +746,18 @@ export function parsePGN(pgn: string, startFen: string = "rnbqkbnr/pppppppp/8/8/
   const states = [parseFEN(startFen)];
   const moves: Move[] = [];
   
-  // Strip annotations and comments
-  let cleanPgn = pgn.replace(/\{[^}]*\}/g, "");
+  // Strip headers
+  let cleanPgn = pgn.replace(/\[[^\]]*\]/g, "");
+  // Strip comments
+  cleanPgn = cleanPgn.replace(/\{[^}]*\}/g, "");
+  // Strip nested variations
+  let prev = "";
+  while (cleanPgn !== prev) {
+    prev = cleanPgn;
+    cleanPgn = cleanPgn.replace(/\([^()]*\)/g, "");
+  }
+  // Strip NAGs (Numeric Annotation Glyphs like $1)
+  cleanPgn = cleanPgn.replace(/\$\d+/g, "");
   // Strip move numbers
   cleanPgn = cleanPgn.replace(/\d+\.+/g, "");
   // Strip result
@@ -771,4 +781,16 @@ export function parsePGN(pgn: string, startFen: string = "rnbqkbnr/pppppppp/8/8/
   }
   
   return { moves, states };
+}
+
+/** Builds standard PGN movetext, e.g. "1. e4 e5 2. Nf3 Nc6". */
+export function buildPgn(sanList: string[]): string {
+  const parts: string[] = [];
+  for (let i = 0; i < sanList.length; i += 2) {
+    const number = Math.floor(i / 2) + 1;
+    const white = sanList[i];
+    const black = sanList[i + 1];
+    parts.push(black ? `${number}. ${white} ${black}` : `${number}. ${white}`);
+  }
+  return parts.join(" ");
 }

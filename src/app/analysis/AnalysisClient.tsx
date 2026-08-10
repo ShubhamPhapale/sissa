@@ -14,7 +14,8 @@ import {
   isInCheck,
   isCheckmate,
   generateSAN,
-  parsePGN
+  parsePGN,
+  buildPgn
 } from "@/lib/chess-engine";
 import GameAnalysis from "@/components/GameAnalysis";
 import { GameAnalysisResult } from "@/lib/game-analysis-types";
@@ -103,12 +104,17 @@ export default function AnalysisClient() {
       setMoves(apiMoves);
       setViewPly(null);
       setFullGameAnalysis(null);
-      setPgnInput("");
       setActiveTab("review"); // Auto-switch to review
     } catch (e) {
       alert("Invalid PGN or move!");
     }
   };
+
+  useEffect(() => {
+    // Automatically update the PGN textarea to match the current game when moves change
+    const currentPgn = buildPgn(moves.map(m => m.san));
+    setPgnInput(currentPgn);
+  }, [moves]);
 
   useEffect(() => {
     let active = true;
@@ -248,6 +254,7 @@ export default function AnalysisClient() {
     setMoves([]);
     setStates([parseFEN(INITIAL_FEN)]);
     setViewPly(null);
+    setFullGameAnalysis(null);
   };
 
   useEffect(() => {

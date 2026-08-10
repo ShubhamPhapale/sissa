@@ -113,7 +113,8 @@ export async function analyzeGame(
   let previousBestMoveSan: string | null = null;
   
   try {
-    const initial = await analyzePosition(currentFen, 12);
+    // Request 2 lines to find the gap between the best move and the second best move
+    const initial = await analyzePosition(currentFen, 12, 20, undefined, undefined, undefined, 0, 2);
     if (initial) {
       const parsed = parseScoreText(initial.scoreText);
       previousEval = parsed.cp;
@@ -153,17 +154,22 @@ export async function analyzeGame(
       let nextBestMove: string | null = null;
       let nextBestMoveSan: string | null = null;
 
+      let secondBestGap = 0;
       try {
-        const result = await analyzePosition(currentFen, 12);
+        const result = await analyzePosition(currentFen, 12, 20, undefined, undefined, undefined, 0, 2);
         if (result) {
           const parsed = parseScoreText(result.scoreText);
           evalAfter = parsed.cp;
           afterIsMate = parsed.isMate;
           nextBestMove = result.bestMove ?? null;
           nextBestMoveSan = result.bestMoveSan ?? null;
+          
+          if (result.lines && result.lines.length > 1) {
+            secondBestGap = Math.abs(result.lines[0].score - result.lines[1].score);
+          }
         }
       } catch {
-        // Use previous eval on failure.
+        // Fallback if analysis fails for this move
       }
 
       // Compute centipawn loss from the moving side's perspective.
@@ -177,6 +183,10 @@ export async function analyzeGame(
 
       // Classify the move.
       let classification: MoveClassification["classification"];
+      
+      // If we found the absolute best move, or a move that is practically best
+      const foundBestMove = cpLoss <= 10;
+      
       if (i < 6) {
         classification = "book";
       } else if (cpLoss >= 200) {
@@ -185,30 +195,18 @@ export async function analyzeGame(
         classification = "mistake";
       } else if (cpLoss >= 50) {
         classification = "inaccuracy";
+      } else if (foundBestMove && secondBestGap >= 300) {
+        // The move played was the ONLY good move (others lose 3+ pawns)
+        classification = "brilliant";
+      } else if (foundBestMove && secondBestGap >= 150) {
+        // The move played was significantly better than alternatives
+        classification = "great";
+      } else if (cpLoss >= 20) {
+        classification = "good";
+      } else if (cpLoss >= 10) {
+        classification = "excellent";
       } else {
-        // Evaluate for Great / Brilliant using win probability swings
-        const wpBefore = getWinProb(isWhite ? evalBefore : -evalBefore);
-        const wpAfter = getWinProb(isWhite ? evalAfter : -evalAfter);
-        
-        // If you were losing/drawing (wp < 0.4) and found a move that swings it heavily (wp > 0.6)
-        const isGameChanger = wpBefore < 0.4 && wpAfter > 0.6;
-        
-        // If the move outperforms expectations massively (e.g. finding a forced mate or huge material win that wasn't obvious)
-        const isMassiveSwing = (isWhite ? evalAfter - evalBefore : evalBefore - evalAfter) > 300;
-
-        if (cpLoss === 0 && (isGameChanger || isMassiveSwing)) {
-          // Approximate Brilliant: game changer + absolute best move
-          classification = "brilliant";
-        } else if (cpLoss <= 10 && isGameChanger) {
-          // Approximate Great: Huge swing but maybe not the absolute #1 move (or second best)
-          classification = "great";
-        } else if (cpLoss >= 20) {
-          classification = "good";
-        } else if (cpLoss >= 10) {
-          classification = "excellent";
-        } else {
-          classification = "best";
-        }
+        classification = "best";
       }
 
       const acc = getMoveAccuracy(evalBefore, evalAfter, isWhite);
