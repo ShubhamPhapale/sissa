@@ -40,14 +40,35 @@ export async function POST(req: NextRequest) {
     const initial = Math.floor(seconds);
     const gameId = randomUUID().slice(0, 8);
 
+    // Determine if the user is playing as Black against a bot
+    const isPlayingAsBlack = blackName === (session ? session.username : whiteName) || (whiteName.startsWith("Stockfish") && !blackName?.startsWith("Stockfish"));
+    
+    // Always assign session data to the color the user actually requested
+    let finalWhiteName = whiteName;
+    let finalBlackName = blackName;
+    let finalWhiteId = null;
+    let finalBlackId = null;
+
+    if (session) {
+      if (isPlayingAsBlack) {
+        finalBlackId = session.userId;
+        finalBlackName = session.username;
+        finalWhiteName = whiteName; // typically "Stockfish" or some other name
+      } else {
+        finalWhiteId = session.userId;
+        finalWhiteName = session.username;
+        finalBlackName = blackName;
+      }
+    }
+
     const [newGame] = await db
       .insert(games)
       .values({
         id: gameId,
-        whitePlayerId: session ? session.userId : null,
-        blackPlayerId: null, // second player joins later, or bot
-        whitePlayerName: session ? session.username : whiteName,
-        blackPlayerName: blackName,
+        whitePlayerId: finalWhiteId,
+        blackPlayerId: finalBlackId,
+        whitePlayerName: finalWhiteName,
+        blackPlayerName: finalBlackName,
         status: "playing",
         timeControl: initial,
         increment: inc,
