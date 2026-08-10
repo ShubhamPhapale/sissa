@@ -38,6 +38,9 @@ export default function Home() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  // Tabs
+  const [activeTab, setActiveTab] = useState<"quick" | "lobby">("quick");
+
   // Matchmaking state
   const [inQueue, setInQueue] = useState(false);
   const [queueTime, setQueueTime] = useState(0);
@@ -264,167 +267,187 @@ export default function Home() {
           </div>
         </section>
 
-        <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,1.05fr),minmax(420px,0.95fr)] lg:items-start">
-          
-          {/* Left Column: Lobby */}
-          <div className="flex flex-col gap-6 h-full">
-            <div className="card flex flex-col overflow-hidden h-[500px]">
-              <div className="bg-[var(--bg-card)] border-b border-[var(--border)] px-4 py-4 sticky top-0 z-10 flex items-center justify-between">
-                <h3 className="font-bold text-lg text-[var(--text-primary)] flex items-center gap-2">
-                  Lobby <span className="text-xs bg-[var(--accent)] text-white px-2 py-0.5 rounded-full">{lobbyGames.filter(g => !user || g.userId !== user.id).length}</span>
-                </h3>
-              </div>
-              <div className="flex-1 overflow-y-auto">
-                {lobbyGames.filter(g => !user || g.userId !== user.id).length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-[var(--text-muted)] p-6 text-center">
-                    <p className="mb-2">No active challenges right now.</p>
-                    <p className="text-sm">Create a Quick Match to invite others to play!</p>
+        <div className="mx-auto max-w-2xl mb-12">
+          <div className="card overflow-hidden">
+            {/* Tabs Header */}
+            <div className="flex border-b border-[var(--border)] bg-[var(--bg-card)]">
+              <button 
+                onClick={() => setActiveTab("quick")} 
+                className={`flex-1 py-4 font-bold text-sm tracking-wide uppercase transition-colors ${activeTab === 'quick' ? 'border-b-2 border-[var(--accent)] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:bg-[var(--bg-input)]'}`}
+              >
+                Quick Pairing
+              </button>
+              <button 
+                onClick={() => setActiveTab("lobby")} 
+                className={`flex-1 py-4 font-bold text-sm tracking-wide uppercase transition-colors flex items-center justify-center gap-2 ${activeTab === 'lobby' ? 'border-b-2 border-[var(--accent)] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:bg-[var(--bg-input)]'}`}
+              >
+                Lobby <span className="bg-[var(--accent)] text-white text-[10px] px-1.5 py-0.5 rounded-full">{lobbyGames.filter(g => !user || g.userId !== user.id).length}</span>
+              </button>
+            </div>
+
+            {/* Tab Content */}
+            <div className="min-h-[450px]">
+              {activeTab === 'lobby' ? (
+                <div className="h-full flex flex-col max-h-[500px]">
+                  <div className="overflow-y-auto flex-1">
+                    {lobbyGames.filter(g => !user || g.userId !== user.id).length === 0 ? (
+                      <div className="h-[400px] flex flex-col items-center justify-center text-[var(--text-muted)] p-6 text-center">
+                        <p className="mb-2">No active challenges right now.</p>
+                        <p className="text-sm">Switch to Quick Pairing to create a match!</p>
+                      </div>
+                    ) : (
+                      <table className="w-full text-left border-collapse">
+                        <thead className="bg-[var(--bg-input)] sticky top-0 z-10">
+                          <tr className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] border-b border-[var(--border)]">
+                            <th className="py-2.5 px-4 font-semibold">Player</th>
+                            <th className="py-2.5 px-4 font-semibold">Rating</th>
+                            <th className="py-2.5 px-4 font-semibold">Time</th>
+                            <th className="py-2.5 px-4 font-semibold text-right">Mode</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {lobbyGames.filter(g => !user || g.userId !== user.id).map((g) => (
+                            <tr 
+                              key={g.id} 
+                              onClick={() => handleJoinLobby(g.id)} 
+                              className="cursor-pointer hover:bg-[var(--bg-input)] transition-colors group border-b border-[var(--border)] last:border-0"
+                            >
+                              <td className="py-3.5 px-4 font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors">{g.username}</td>
+                              <td className="py-3.5 px-4 text-sm text-[var(--text-secondary)]">{g.rating}</td>
+                              <td className="py-3.5 px-4 font-mono font-bold text-sm text-[var(--text-primary)]">{Math.floor(g.timeControl/60)}{g.increment > 0 ? `+${g.increment}` : ""}</td>
+                              <td className="py-3.5 px-4 text-right text-xs text-[var(--text-secondary)] uppercase tracking-wider">Rated</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
-                ) : (
-                  lobbyGames.filter(g => !user || g.userId !== user.id).map(g => (
-                    <button
-                      key={g.id}
-                      onClick={() => handleJoinLobby(g.id)}
-                      className="w-full text-left px-4 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-input)] transition-colors flex items-center justify-between group"
-                    >
-                      <div>
-                        <div className="font-semibold text-[var(--text-primary)]">{g.username}</div>
-                        <div className="text-xs text-[var(--text-secondary)]">{g.rating} Rating</div>
+                </div>
+              ) : (
+                <div id="new-game" className="p-6 md:p-7 relative flex flex-col h-full">
+                  {!user && !authLoading && (
+                    <div className="mb-6 p-4 rounded-lg bg-blue-900/20 border border-blue-500/30 shrink-0">
+                      <h3 className="text-sm font-bold text-blue-300 mb-1">Play Ranked Games</h3>
+                      <p className="text-xs text-blue-200/70 mb-3">
+                        Log in to play ranked matchmaking against others. Anonymous play is unrated.
+                      </p>
+                      <div className="flex gap-2">
+                        <Link href="/login" className="btn btn-primary text-xs py-1.5 px-4">Log In</Link>
+                        <Link href="/signup" className="btn btn-secondary text-xs py-1.5 px-4">Sign Up</Link>
                       </div>
-                      <div className="text-right">
-                        <div className="font-mono text-sm text-[var(--text-primary)] font-bold">{Math.floor(g.timeControl/60)}{g.increment > 0 ? `+${g.increment}` : ""}</div>
-                        <div className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider group-hover:text-[var(--accent)] transition-colors">Play</div>
+                    </div>
+                  )}
+                  
+                  {inQueue ? (
+                    <div className="flex-1 flex flex-col items-center justify-center py-10">
+                      <div className="w-16 h-16 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin mb-6"></div>
+                      <h2 className="text-xl font-bold mb-2">Finding opponent...</h2>
+                      <p className="text-[var(--text-secondary)] mb-8 font-mono">
+                        Time in queue: {formatTime(queueTime)}
+                      </p>
+                      <button 
+                        onClick={handleCancelQueue}
+                        className="btn btn-secondary text-sm text-red-400 hover:text-red-300"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex flex-col">
+                      <h2 className="mb-2 text-xl font-bold">
+                        Play Online
+                      </h2>
+                      <p className="mb-5 text-sm text-[var(--text-secondary)]">
+                        Choose a time control and find a match or invite a friend.
+                      </p>
+                      
+                      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
+                        {[
+                          { label: "1 + 0", name: "Bullet", time: 60, inc: 0 },
+                          { label: "2 + 1", name: "Bullet", time: 120, inc: 1 },
+                          { label: "3 + 0", name: "Blitz", time: 180, inc: 0 },
+                          { label: "3 + 2", name: "Blitz", time: 180, inc: 2 },
+                          { label: "5 + 0", name: "Blitz", time: 300, inc: 0 },
+                          { label: "5 + 3", name: "Blitz", time: 300, inc: 3 },
+                          { label: "10 + 0", name: "Rapid", time: 600, inc: 0 },
+                          { label: "15 + 10", name: "Rapid", time: 900, inc: 10 },
+                          { label: "30 + 0", name: "Classical", time: 1800, inc: 0 },
+                        ].map((preset) => (
+                          <button
+                            key={`${preset.time}+${preset.inc}`}
+                            onClick={() => {
+                              setSelectedTime(preset.time);
+                              setIncrement(preset.inc);
+                            }}
+                            className={`flex flex-col items-center justify-center min-h-[72px] rounded-xl p-2 transition-all border ${
+                              selectedTime === preset.time && increment === preset.inc
+                                ? "bg-[var(--accent)] border-transparent text-[var(--text-primary)] shadow-lg shadow-orange-500/20 scale-105 z-10"
+                                : "bg-[var(--bg-input)] border-transparent text-[var(--text-secondary)] hover:bg-[var(--border)]"
+                            }`}
+                          >
+                            <div className="text-sm sm:text-base font-bold tracking-tight">{preset.label}</div>
+                            <div className="text-[10px] sm:text-xs opacity-80 uppercase tracking-widest mt-0.5">{preset.name}</div>
+                          </button>
+                        ))}
                       </div>
-                    </button>
-                  ))
-                )}
-              </div>
+
+                      {error && (
+                        <div className="mb-4 p-2 rounded-md bg-red-900/30 border border-red-700/40 text-sm text-red-300 shrink-0">
+                          {error}
+                        </div>
+                      )}
+
+                      <div className="mt-auto">
+                        <label className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">
+                          Computer Level: {botLevel} {botLevel === 1 ? "(Beginner)" : botLevel === 12 ? "(Super GM)" : ""}
+                        </label>
+                        <div className="mb-6">
+                          <input
+                            type="range"
+                            min="1"
+                            max="12"
+                            value={botLevel}
+                            onChange={(e) => setBotLevel(parseInt(e.target.value))}
+                            className="w-full accent-[var(--accent)]"
+                          />
+                          <div className="flex justify-between text-[10px] text-[var(--text-muted)] mt-1 px-1 font-mono">
+                            <span>1</span>
+                            <span>6</span>
+                            <span>12</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-3">
+                          <button
+                            onClick={handleQuickMatch}
+                            disabled={creating}
+                            className="btn btn-primary py-3.5 text-sm md:text-base disabled:opacity-60"
+                          >
+                            {creating ? "Wait…" : "Quick Match"}
+                          </button>
+                          <button
+                            onClick={handlePlayFriend}
+                            disabled={creating}
+                            className="btn btn-secondary py-3.5 text-sm md:text-base disabled:opacity-60"
+                          >
+                            Play Friend
+                          </button>
+                          <button
+                            onClick={handlePlayComputer}
+                            disabled={creating}
+                            className="btn btn-secondary py-3.5 text-sm md:text-base disabled:opacity-60 bg-[var(--bg-input)]"
+                          >
+                            Play Computer
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Right Column: Create game & Recent games */}
-          <div className="flex flex-col gap-6 h-full">
-            {/* Create game */}
-            <div id="new-game" className="card p-6 md:p-7 relative overflow-hidden">
-              {!user && !authLoading && (
-              <div className="mb-6 p-4 rounded-lg bg-blue-900/20 border border-blue-500/30">
-                <h3 className="text-sm font-bold text-blue-300 mb-1">Play Ranked Games</h3>
-                <p className="text-xs text-blue-200/70 mb-3">
-                  Log in to play ranked matchmaking against others. Anonymous play is unrated.
-                </p>
-                <div className="flex gap-2">
-                  <Link href="/login" className="btn btn-primary text-xs py-1.5 px-4">Log In</Link>
-                  <Link href="/signup" className="btn btn-secondary text-xs py-1.5 px-4">Sign Up</Link>
-                </div>
-              </div>
-            )}
-            
-            {inQueue ? (
-              <div className="h-full flex flex-col items-center justify-center py-10">
-                <div className="w-16 h-16 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin mb-6"></div>
-                <h2 className="text-xl font-bold mb-2">Finding opponent...</h2>
-                <p className="text-[var(--text-secondary)] mb-8 font-mono">
-                  Time in queue: {formatTime(queueTime)}
-                </p>
-                <button 
-                  onClick={handleCancelQueue}
-                  className="btn btn-secondary text-sm text-red-400 hover:text-red-300"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <>
-                <h2 className="mb-2 text-xl font-bold">
-                  Play Online
-                </h2>
-                <p className="mb-5 text-sm text-[var(--text-secondary)]">
-                  Choose a time control and find a match or invite a friend.
-                </p>
-                <label className="block text-sm font-medium mb-3 text-[var(--text-secondary)]">
-                  Time Control
-                </label>
-                <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
-                  {[
-                    { label: "1 + 0", name: "Bullet", time: 60, inc: 0 },
-                    { label: "2 + 1", name: "Bullet", time: 120, inc: 1 },
-                    { label: "3 + 0", name: "Blitz", time: 180, inc: 0 },
-                    { label: "3 + 2", name: "Blitz", time: 180, inc: 2 },
-                    { label: "5 + 0", name: "Blitz", time: 300, inc: 0 },
-                    { label: "5 + 3", name: "Blitz", time: 300, inc: 3 },
-                    { label: "10 + 0", name: "Rapid", time: 600, inc: 0 },
-                    { label: "15 + 10", name: "Rapid", time: 900, inc: 10 },
-                    { label: "30 + 0", name: "Classical", time: 1800, inc: 0 },
-                  ].map((preset) => (
-                    <button
-                      key={`${preset.time}+${preset.inc}`}
-                      onClick={() => {
-                        setSelectedTime(preset.time);
-                        setIncrement(preset.inc);
-                      }}
-                      className={`flex flex-col items-center justify-center min-h-[72px] rounded-xl p-2 transition-all border ${
-                        selectedTime === preset.time && increment === preset.inc
-                          ? "bg-[var(--accent)] border-transparent text-[var(--text-primary)] shadow-lg shadow-orange-500/20 scale-105 z-10"
-                          : "bg-[var(--bg-input)] border-transparent text-[var(--text-secondary)] hover:bg-[var(--border)]"
-                      }`}
-                    >
-                      <div className="text-sm sm:text-base font-bold tracking-tight">{preset.label}</div>
-                      <div className="text-[10px] sm:text-xs opacity-80 uppercase tracking-widest mt-0.5">{preset.name}</div>
-                    </button>
-                  ))}
-                </div>
-
-                {error && (
-                  <div className="mb-4 p-2 rounded-md bg-red-900/30 border border-red-700/40 text-sm text-red-300">
-                    {error}
-                  </div>
-                )}
-
-                <label className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">
-                  Computer Level: {botLevel} {botLevel === 1 ? "(Beginner)" : botLevel === 12 ? "(Super GM)" : ""}
-                </label>
-                <div className="mb-6">
-                  <input
-                    type="range"
-                    min="1"
-                    max="12"
-                    value={botLevel}
-                    onChange={(e) => setBotLevel(parseInt(e.target.value))}
-                    className="w-full accent-[var(--accent)]"
-                  />
-                  <div className="flex justify-between text-xs text-[var(--text-muted)] mt-1 px-1">
-                    <span>1</span>
-                    <span>6</span>
-                    <span>12</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <button
-                    onClick={handleQuickMatch}
-                    disabled={creating}
-                    className="btn btn-primary py-3.5 text-sm md:text-base disabled:opacity-60"
-                  >
-                    {creating ? "Wait…" : "Quick Match"}
-                  </button>
-                  <button
-                    onClick={handlePlayFriend}
-                    disabled={creating}
-                    className="btn btn-secondary py-3.5 text-sm md:text-base disabled:opacity-60"
-                  >
-                    Play Friend
-                  </button>
-                  <button
-                    onClick={handlePlayComputer}
-                    disabled={creating}
-                    className="btn btn-secondary py-3.5 text-sm md:text-base disabled:opacity-60 bg-[var(--bg-input)]"
-                  >
-                    Play Computer
-                  </button>
-                </div>
-              </>
-            )}
-            </div>
+        </div>
 
             {/* Recent games */}
             <div id="recent-games" className="card p-6 md:p-7">
