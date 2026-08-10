@@ -497,6 +497,7 @@ export function applyMove(state: GameState, move: Move): GameState {
  * (check, checkmate, stalemate, 50-move rule, insufficient material).
  */
 export function makeMove(state: GameState, move: Move): GameState {
+  const san = generateSAN(state, move);
   const newState = applyMove(state, move);
   const moverColor = state.turn;
 
@@ -523,6 +524,7 @@ export function makeMove(state: GameState, move: Move): GameState {
   if (recorded) {
     recorded.check = move.check;
     recorded.checkmate = move.checkmate;
+    recorded.san = san;
   }
 
   // 50-move rule

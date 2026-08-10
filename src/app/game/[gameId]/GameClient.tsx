@@ -182,7 +182,11 @@ export default function GameClient() {
   const [origin, setOrigin] = useState("");
 
   // Optimistic position shown immediately after the local player moves.
-  const [optimistic, setOptimistic] = useState<{ state: GameState; plies: number } | null>(null);
+  const [optimistic, setOptimistic] = useState<{
+    basePly: number;
+    variationMoves: Move[];
+    plies: number;
+  } | null>(null);
 
   const [clocks, setClocks] = useState({ white: 0, black: 0 });
   const [clockSnapshot, setClockSnapshot] = useState<{
@@ -358,7 +362,13 @@ export default function GameClient() {
 
   const displayState = useMemo<GameState>(() => {
     if (optimistic) {
-      return optimistic.state;
+      const baseState = replayTo(moves, optimistic.basePly);
+      let state = baseState;
+      const variationPly = optimistic.plies - optimistic.basePly;
+      for (let i = 0; i < variationPly && i < optimistic.variationMoves.length; i++) {
+         state = makeMove(state, optimistic.variationMoves[i]);
+      }
+      return state;
     }
     if (viewPly !== null) return replayTo(moves, viewPly + 1);
     return liveState;
@@ -478,12 +488,25 @@ export default function GameClient() {
 
   const displayMoves = useMemo(() => {
     if (optimistic) {
-      return optimistic.state.moveHistory.map((m) => ({
-        san: m.san ?? "",
+      const baseMoves = moves.slice(0, optimistic.basePly).map(m => ({
+        san: m.san,
         check: m.check,
         checkmate: m.checkmate,
-        createdAt: undefined as string | undefined,
+        createdAt: m.createdAt,
       }));
+      // Generate state to get the SANs for the variation
+      let state = replayTo(moves, optimistic.basePly);
+      const varMoves = optimistic.variationMoves.slice(0, optimistic.plies - optimistic.basePly).map((m) => {
+        state = makeMove(state, m);
+        const recorded = state.moveHistory[state.moveHistory.length - 1];
+        return {
+          san: recorded?.san ?? "",
+          check: recorded?.check ?? false,
+          checkmate: recorded?.checkmate ?? false,
+          createdAt: undefined as string | undefined,
+        };
+      });
+      return [...baseMoves, ...varMoves];
     }
     return moves.map(m => ({
       san: m.san,
@@ -589,16 +612,35 @@ export default function GameClient() {
 
       // Allow exploratory moves locally when the game is finished
       if (game.status === "finished") {
-        const optimisticState = makeMove(displayState, move);
-        setOptimistic({ state: optimisticState, plies: (optimistic?.plies ?? (viewPly !== null ? viewPly + 1 : moves.length)) + 1 });
+        let base = viewPly !== null ? viewPly + 1 : moves.length;
+        let vMoves: Move[] = [];
+        if (optimistic && optimistic.plies === optimistic.basePly + optimistic.variationMoves.length) {
+            base = optimistic.basePly;
+            vMoves = [...optimistic.variationMoves, move];
+        } else if (optimistic) {
+            base = optimistic.basePly;
+            const branchLen = optimistic.plies - optimistic.basePly;
+            vMoves = [...optimistic.variationMoves.slice(0, branchLen), move];
+        } else {
+            vMoves = [move];
+        }
+        
+        setOptimistic({
+          basePly: base,
+          variationMoves: vMoves,
+          plies: base + vMoves.length,
+        });
         return;
       }
 
       if (!myColor || !gameActive || game.turn !== myColor) return;
 
       // Show the move instantly, then reconcile with the server's answer.
-      const optimisticState = makeMove(liveState, move);
-      setOptimistic({ state: optimisticState, plies: moves.length + 1 });
+      setOptimistic({
+        basePly: moves.length,
+        variationMoves: [move],
+        plies: moves.length + 1
+      });
       setViewPly(null);
       setClockSnapshot((prev) => {
         if (!prev) return prev;
@@ -927,9 +969,9 @@ export default function GameClient() {
                   onClick={() => {
                     if (optimistic) {
                       const newPlies = optimistic.plies - 1;
-                      if (newPlies <= moves.length) {
+                      if (newPlies <= optimistic.basePly) {
                         setOptimistic(null);
-                        setViewPly(Math.max(-1, newPlies - 1));
+                        setViewPly(Math.max(-1, optimistic.basePly - 1));
                       } else {
                         setOptimistic({ ...optimistic, plies: newPlies });
                       }
@@ -948,13 +990,14 @@ export default function GameClient() {
                 <button
                   onClick={() => {
                     if (optimistic) {
-                      const newPlies = Math.min(optimistic.plies + 1, optimistic.state.moveHistory.length);
+                      const maxPlies = optimistic.basePly + optimistic.variationMoves.length;
+                      const newPlies = Math.min(optimistic.plies + 1, maxPlies);
                       setOptimistic({ ...optimistic, plies: newPlies });
                     } else {
                       setViewPly((p) => (p === null || p + 1 >= moves.length - 1 ? null : p + 1));
                     }
                   }}
-                  disabled={Boolean((isLiveView && !optimistic) || (optimistic && optimistic.plies === optimistic.state.moveHistory.length))}
+                  disabled={Boolean((isLiveView && !optimistic) || (optimistic && optimistic.plies === optimistic.basePly + optimistic.variationMoves.length))}
                   className="btn btn-secondary text-xs disabled:opacity-40 px-4 font-mono font-bold"
                 >
                   &gt;
@@ -1083,12 +1126,16 @@ export default function GameClient() {
               <MoveHistory
                 moves={displayMoves.map((m) => ({ san: m.san, check: m.check, checkmate: m.checkmate }))}
                 activeMoveIndex={optimistic?.plies != null ? optimistic.plies - 1 : (viewPly ?? moves.length - 1)}
-                onMoveClick={(i) => { 
-                  if (i < moves.length) {
-                    setViewPly(i === moves.length - 1 ? null : i); 
-                    setOptimistic(null); 
+                onMoveClick={(i) => {
+                  if (optimistic) {
+                    if (i < optimistic.basePly) {
+                      setViewPly(i === moves.length - 1 ? null : i);
+                      setOptimistic(null);
+                    } else {
+                      setOptimistic({ ...optimistic, plies: i + 1 });
+                    }
                   } else {
-                    setOptimistic(prev => prev ? { ...prev, plies: i + 1 } : null);
+                    setViewPly(i === moves.length - 1 ? null : i);
                   }
                 }}
                 className="flex-1 min-h-0"
@@ -1252,7 +1299,18 @@ export default function GameClient() {
                     return { san: m.san, check: m.check, checkmate: m.checkmate, moveTime, timeLeft };
                   });
                 })()}
-                onMoveClick={(ply) => { setViewPly(ply === displayMoves.length - 1 ? null : ply); setOptimistic(null); }}
+                onMoveClick={(ply) => {
+                  if (optimistic) {
+                    if (ply < optimistic.basePly) {
+                      setViewPly(ply === moves.length - 1 ? null : ply);
+                      setOptimistic(null);
+                    } else {
+                      setOptimistic({ ...optimistic, plies: ply + 1 });
+                    }
+                  } else {
+                    setViewPly(ply === moves.length - 1 ? null : ply);
+                  }
+                }}
                 activePly={optimistic?.plies != null ? optimistic.plies - 1 : (viewPly ?? moves.length - 1)}
                 onAnalysisComplete={setFullGameAnalysis}
                 initialAnalysis={(game as any).analysis}
