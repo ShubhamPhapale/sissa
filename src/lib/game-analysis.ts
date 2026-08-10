@@ -2,6 +2,7 @@ import { analyzePosition } from "@/lib/stockfish-analysis";
 import {
   createInitialState,
   generateLegalMoves,
+  getAllLegalMoves,
   makeMove,
   stateToFEN,
   algebraicToSquare,
@@ -66,6 +67,22 @@ function emptyCounts(): ClassificationCounts {
     mistake: 0,
     blunder: 0,
   };
+}
+
+function getMaterialBalance(board: (string | null)[][]): { w: number, b: number } {
+  let w = 0, b = 0;
+  const values: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9 };
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = board[r][c];
+      if (p) {
+        const v = values[p.toLowerCase()] || 0;
+        if (p === p.toUpperCase()) w += v;
+        else b += v;
+      }
+    }
+  }
+  return { w, b };
 }
 
 /**
@@ -138,11 +155,31 @@ export async function analyzeGame(
       const bestMoveForThisTurn = previousBestMove;
       const bestMoveSanForThisTurn = previousBestMoveSan;
 
+      const matBefore = getMaterialBalance(state.board);
+      const ourMatBefore = isWhite ? matBefore.w - matBefore.b : matBefore.b - matBefore.w;
+
       // Apply the move to get the next position.
       const nextState = applyMoveFromRecord(state, move);
       if (!nextState) {
         // Illegal move — skip remainder.
         break;
+      }
+      
+      let isSacrifice = false;
+      const oppLegals = getAllLegalMoves(nextState);
+      for (const oppMove of oppLegals) {
+         // Optimization: only consider captures
+         if (nextState.board[oppMove.to.row][oppMove.to.col] !== null || oppMove.enPassant) {
+            const stateAfterOpp = makeMove(nextState, oppMove);
+            const matAfterOpp = getMaterialBalance(stateAfterOpp.board);
+            const ourMatAfterOpp = isWhite ? matAfterOpp.w - matAfterOpp.b : matAfterOpp.b - matAfterOpp.w;
+            // If the opponent can legally capture something such that we are down in material 
+            // relative to the start of the turn (by at least 2 points e.g. exchange or piece), it's a sacrifice.
+            if (ourMatAfterOpp <= ourMatBefore - 2) {
+               isSacrifice = true;
+               break;
+            }
+         }
       }
 
       state = nextState;
@@ -195,11 +232,11 @@ export async function analyzeGame(
         classification = "mistake";
       } else if (cpLoss >= 50) {
         classification = "inaccuracy";
-      } else if (foundBestMove && secondBestGap >= 300) {
-        // The move played was the ONLY good move (others lose 3+ pawns)
+      } else if (foundBestMove && isSacrifice) {
+        // The move played was best and it involved an intentional sacrifice!
         classification = "brilliant";
       } else if (foundBestMove && secondBestGap >= 150) {
-        // The move played was significantly better than alternatives
+        // The move played was significantly better than alternatives (only working move)
         classification = "great";
       } else if (cpLoss >= 20) {
         classification = "good";
