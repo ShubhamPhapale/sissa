@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { CLASSIFICATION_COLORS, CLASSIFICATION_ICONS } from "@/lib/game-analysis-types";
 
 export interface HistoryMove {
   san: string;
   check?: boolean;
   checkmate?: boolean;
+  classification?: string;
 }
 
 interface MoveHistoryProps {
@@ -103,12 +105,23 @@ function MoveEntry({
   return (
     <button
       type="button"
-      className={`move-entry flex-1 text-sm text-left ${isActive ? "active" : ""}`}
+      className={`move-entry flex-1 text-sm text-left flex items-center justify-between ${isActive ? "active" : ""}`}
       onClick={() => onClick?.(ply)}
     >
       <span className="font-mono">
         {move.san}{suffix}
       </span>
+      {move.classification && CLASSIFICATION_COLORS[move.classification as keyof typeof CLASSIFICATION_COLORS] && (
+        <span 
+          className="text-[10px] font-bold px-1 rounded-sm ml-1 shrink-0 leading-tight"
+          style={{ 
+            backgroundColor: CLASSIFICATION_COLORS[move.classification as keyof typeof CLASSIFICATION_COLORS],
+            color: '#fff'
+          }}
+        >
+          {CLASSIFICATION_ICONS[move.classification as keyof typeof CLASSIFICATION_ICONS]}
+        </span>
+      )}
     </button>
   );
 }

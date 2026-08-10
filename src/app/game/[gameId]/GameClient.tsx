@@ -1267,7 +1267,12 @@ export default function GameClient() {
               )}
 
               <MoveHistory
-                moves={displayMoves.map((m) => ({ san: m.san, check: m.check, checkmate: m.checkmate }))}
+                moves={displayMoves.map((m, i) => ({ 
+                  san: m.san, 
+                  check: m.check, 
+                  checkmate: m.checkmate,
+                  classification: fullGameAnalysis?.moves[i]?.classification 
+                }))}
                 activeMoveIndex={optimistic?.plies != null ? optimistic.plies - 1 : (viewPly ?? moves.length - 1)}
                 onMoveClick={(i) => {
                   if (optimistic) {

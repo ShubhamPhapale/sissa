@@ -539,7 +539,12 @@ export default function AnalysisClient() {
 
             {activeTab === "engine" && (
               <MoveHistory
-                moves={moves.map(m => ({ san: m.san, check: m.check, checkmate: m.checkmate }))}
+                moves={moves.map((m, i) => ({ 
+                  san: m.san, 
+                  check: m.check, 
+                  checkmate: m.checkmate,
+                  classification: fullGameAnalysis?.moves[i]?.classification 
+                }))}
                 activeMoveIndex={activePly}
                 onMoveClick={(i) => setViewPly(i === moves.length - 1 ? null : i)}
                 className="flex-1 min-h-0"
