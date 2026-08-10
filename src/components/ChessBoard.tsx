@@ -31,7 +31,7 @@ interface ChessBoardProps {
   /** Classification of the last move to show as a badge. */
   lastMoveClassification?: string | null;
   /** Best move arrows to display. */
-  bestMoveArrows?: Array<{ from: string; to: string; color?: string }> | null;
+  bestMoveArrows?: Array<{ from: string; to: string; color?: string; width?: number; opacity?: number }> | null;
   /** Enable premoves when it is the opponent's turn. */
   premovesEnabled?: boolean;
 }
@@ -371,7 +371,7 @@ export default function ChessBoard({
                 refY="2"
                 orient="auto"
               >
-                <polygon points="0 0, 4 2, 0 4" fill={arrow.color || "rgba(0, 128, 255, 0.7)"} />
+                <polygon points="0 0, 4 2, 0 4" fill={arrow.color || "rgba(0, 128, 255, 0.7)"} opacity={arrow.opacity || 1} />
               </marker>
             ))}
           </defs>
@@ -401,13 +401,14 @@ export default function ChessBoard({
 
             return (
               <line
-                key={`arrow-${idx}`}
-                x1={x1}
-                y1={y1}
-                x2={nx}
-                y2={ny}
+                key={idx}
+                x1={`${x1}%`}
+                y1={`${y1}%`}
+                x2={`${nx}%`}
+                y2={`${ny}%`}
                 stroke={arrow.color || "rgba(0, 128, 255, 0.7)"}
-                strokeWidth="2.5"
+                strokeWidth={arrow.width || 1.8}
+                strokeOpacity={arrow.opacity || 1}
                 strokeLinecap="round"
                 markerEnd={`url(#arrowhead-${idx})`}
               />

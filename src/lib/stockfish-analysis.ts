@@ -1,6 +1,14 @@
 import { fork, ChildProcess } from "child_process";
 import path from "path";
 
+export interface StockfishLine {
+  multipv: number;
+  score: number;
+  scoreText: string;
+  pv: string[];
+  pvSan: string[];
+}
+
 export interface StockfishAnalysis {
   bestMove: string;
   bestMoveSan?: string;
@@ -9,6 +17,7 @@ export interface StockfishAnalysis {
   depth: number;
   pv: string[];
   pvSan: string[];
+  lines: StockfishLine[];
 }
 
 export type SanTranslator = (moves: string[]) => string[];
@@ -18,7 +27,7 @@ class StockfishSingleton {
   
   private worker: ChildProcess | null = null;
   private isProcessing = false;
-  private queue: Array<{ fen: string; depth: number; skillLevel?: number; translateSan?: SanTranslator; onProgress?: (res: Partial<StockfishAnalysis>) => void; resolve: (res: StockfishAnalysis | null) => void; signal?: AbortSignal; movetime?: number }> = [];
+  private queue: Array<{ fen: string; depth: number; multiPV: number; skillLevel?: number; translateSan?: SanTranslator; onProgress?: (res: Partial<StockfishAnalysis>) => void; resolve: (res: StockfishAnalysis | null) => void; signal?: AbortSignal; movetime?: number }> = [];
   
   private initPromise: Promise<void> | null = null;
 
@@ -26,7 +35,7 @@ class StockfishSingleton {
   private currentProgress: ((res: Partial<StockfishAnalysis>) => void) | null = null;
   private currentTimeout: NodeJS.Timeout | null = null;
   
-  private currentAnalysis: Partial<StockfishAnalysis> = { pv: [], pvSan: [] };
+  private currentAnalysis: Partial<StockfishAnalysis> = { pv: [], pvSan: [], lines: [] };
   private translator: SanTranslator | null = null;
   private currentIsBlackToMove = false;
 
@@ -55,7 +64,6 @@ class StockfishSingleton {
           this.worker!.send("uci");
           this.worker!.send("setoption name Hash value 16"); // Explicitly limit RAM to 16MB
           this.worker!.send("setoption name Threads value 1"); // Ensure single threaded
-          this.worker!.send("setoption name MultiPV value 1");
           this.worker!.send("setoption name UCI_ShowWDL value true");
           this.worker!.send("isready");
           resolveInit();
@@ -112,6 +120,7 @@ class StockfishSingleton {
           depth: this.currentAnalysis.depth || 0,
           pv: this.currentAnalysis.pv || [],
           pvSan: this.currentAnalysis.pvSan || [],
+          lines: this.currentAnalysis.lines || [],
         };
 
         this.currentResolve(result as StockfishAnalysis);
@@ -132,7 +141,13 @@ class StockfishSingleton {
       const depthMatch = line.match(/depth (\d+)/);
       if (depthMatch) this.currentAnalysis.depth = parseInt(depthMatch[1], 10);
 
+      let multiPV = 1;
+      const multiPVMatch = line.match(/multipv (\d+)/);
+      if (multiPVMatch) multiPV = parseInt(multiPVMatch[1], 10);
+
       const scoreMatch = line.match(/score (cp|mate) (-?\d+)/);
+      let score = 0;
+      let scoreText = "0.00";
       if (scoreMatch) {
         const type = scoreMatch[1];
         let val = parseInt(scoreMatch[2], 10);
@@ -144,29 +159,55 @@ class StockfishSingleton {
         }
 
         if (type === "cp") {
-          this.currentAnalysis.score = val;
-          // Force sign character for positive if we want, but let's just use normal numbers
-          this.currentAnalysis.scoreText = (val > 0 ? "+" : "") + (val / 100).toFixed(2);
+          score = val;
+          scoreText = (val > 0 ? "+" : "") + (val / 100).toFixed(2);
         } else {
-          this.currentAnalysis.score = val > 0 ? 10000 - val : -10000 - val;
+          score = val > 0 ? 10000 - val : -10000 - val;
           // Mate in X: #X for white winning, -#X for black winning
-          this.currentAnalysis.scoreText = val > 0 ? `#${val}` : `-#${Math.abs(val)}`;
+          scoreText = val > 0 ? `#${val}` : `-#${Math.abs(val)}`;
         }
       }
 
       const pvMatch = line.match(/ pv (.+)$/);
+      let pv: string[] = [];
+      let pvSan: string[] = [];
       if (pvMatch) {
-        const pvs = pvMatch[1].split(" ");
-        this.currentAnalysis.pv = pvs;
+        pv = pvMatch[1].split(" ");
         if (this.translator) {
           try {
-            this.currentAnalysis.pvSan = this.translator(pvs);
-            this.currentAnalysis.bestMoveSan = this.currentAnalysis.pvSan[0];
+            pvSan = this.translator(pv);
           } catch {
-            this.currentAnalysis.pvSan = [];
-            this.currentAnalysis.bestMoveSan = undefined;
+            pvSan = [];
           }
         }
+      }
+
+      if (!this.currentAnalysis.lines) this.currentAnalysis.lines = [];
+      
+      // Update the specific line
+      const lineObj: StockfishLine = {
+        multipv: multiPV,
+        score,
+        scoreText,
+        pv,
+        pvSan,
+      };
+
+      const lineIndex = this.currentAnalysis.lines.findIndex(l => l.multipv === multiPV);
+      if (lineIndex >= 0) {
+        this.currentAnalysis.lines[lineIndex] = lineObj;
+      } else {
+        this.currentAnalysis.lines.push(lineObj);
+        this.currentAnalysis.lines.sort((a, b) => a.multipv - b.multipv);
+      }
+
+      // Update root analysis if multipv is 1
+      if (multiPV === 1) {
+        this.currentAnalysis.score = score;
+        this.currentAnalysis.scoreText = scoreText;
+        this.currentAnalysis.pv = pv;
+        this.currentAnalysis.pvSan = pvSan;
+        this.currentAnalysis.bestMoveSan = pvSan[0];
       }
 
       if (this.currentProgress) {
@@ -182,7 +223,8 @@ class StockfishSingleton {
     translateSan?: SanTranslator,
     onProgress?: (info: Partial<StockfishAnalysis>) => void,
     signal?: AbortSignal,
-    movetime?: number
+    movetime?: number,
+    multiPV: number = 1
   ): Promise<StockfishAnalysis | null> {
     // Only used directly inside the file anyway.
 
@@ -191,7 +233,7 @@ class StockfishSingleton {
         return resolve(null);
       }
 
-      this.queue.push({ fen, depth, skillLevel, translateSan, onProgress, resolve, signal, movetime: movetime ?? 2000 });
+      this.queue.push({ fen, depth, multiPV, skillLevel, translateSan, onProgress, resolve, signal, movetime: movetime ?? 2000 });
       
       if (signal) {
         signal.addEventListener("abort", () => {
@@ -236,8 +278,10 @@ class StockfishSingleton {
       }
 
       const skillLevel = (item as any).skillLevel ?? 20;
+      const multiPV = (item as any).multiPV ?? 1;
       const movetime = (item as any).movetime;
       this.worker.send(`setoption name Skill Level value ${skillLevel}`);
+      this.worker.send(`setoption name MultiPV value ${multiPV}`);
       this.worker.send(`position fen ${item.fen}`);
       
       if (movetime && movetime > 0) {
@@ -271,8 +315,9 @@ export async function analyzePosition(
   translateSan?: SanTranslator,
   onProgress?: (info: Partial<StockfishAnalysis>) => void,
   signal?: AbortSignal,
-  movetime?: number
+  movetime?: number,
+  multiPV: number = 1
 ): Promise<StockfishAnalysis | null> {
   const instance = StockfishSingleton.getInstance();
-  return instance.analyzePosition(fen, depth, skillLevel, translateSan, onProgress, signal, movetime);
+  return (instance as any).analyzePosition(fen, depth, skillLevel, translateSan, onProgress, signal, movetime, multiPV);
 }

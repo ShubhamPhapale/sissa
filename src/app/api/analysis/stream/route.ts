@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const fen = searchParams.get("fen");
   const depth = parseInt(searchParams.get("depth") || "20", 10);
+  const multiPV = parseInt(searchParams.get("multipv") || "1", 10);
 
   if (!fen) {
     return new Response("Missing fen", { status: 400 });
@@ -34,7 +35,8 @@ export async function GET(req: NextRequest) {
           } catch (e) {}
         }, 
         req.signal,
-        0 // movetime 0 means no time limit, search until depth or aborted
+        0, // movetime 0 means no time limit, search until depth or aborted
+        multiPV
       );
 
       try {

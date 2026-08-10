@@ -215,6 +215,7 @@ export default function GameClient() {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [engineEnabled, setEngineEnabled] = useState(false);
   const [analysisDepth, setAnalysisDepth] = useState(20);
+  const [multiPV, setMultiPV] = useState(1);
   const [fullGameAnalysis, setFullGameAnalysis] = useState<GameAnalysisResult | null>(null);
   const inFlight = useRef(false);
   const mutationInFlight = useRef(false);
@@ -408,48 +409,75 @@ export default function GameClient() {
   const isMyTurn = Boolean(gameActive && myColor && game?.turn === myColor && !optimistic);
 
   const bestMoveArrows = useMemo(() => {
-    const activePly = viewPly !== null ? viewPly : moves.length - 1;
-    const arrows: Array<{ from: string; to: string; color: string }> = [];
-    
-    // 1. Live Engine Analysis (blue arrow)
-    if (engineEnabled) {
-      const liveMove = analysis?.bestMove || (analysis?.pv && analysis.pv[0]);
-      if (liveMove && liveMove.length >= 4 && liveMove !== "(none)") {
-        arrows.push({
-          from: liveMove.substring(0, 2),
-          to: liveMove.substring(2, 4),
-          color: "rgba(0, 128, 255, 0.7)", // blue
-        });
+    // 1. Live Engine Analysis arrows
+    if (engineEnabled && analysis) {
+      if (!analysis.lines || analysis.lines.length === 0) {
+        const bMove = analysis.bestMove || (analysis.pv && analysis.pv[0]);
+        if (bMove && bMove.length >= 4 && bMove !== "(none)") {
+          return [{
+            from: bMove.substring(0, 2),
+            to: bMove.substring(2, 4),
+            color: "rgba(0, 128, 255)", 
+            width: 2.2,
+            opacity: 1,
+          }];
+        }
+        return null;
       }
+
+      const bestScore = analysis.lines[0].score;
+      return analysis.lines.map((line) => {
+        const bMove = line.pv[0];
+        if (!bMove || bMove.length < 4 || bMove === "(none)") return null;
+        
+        const scoreDiff = Math.max(0, Math.abs(bestScore - line.score) / 100); 
+        const opacity = Math.max(0.3, 1 - scoreDiff * 0.4);
+        const width = Math.max(0.8, 2.2 - scoreDiff * 0.6);
+
+        return {
+          from: bMove.substring(0, 2),
+          to: bMove.substring(2, 4),
+          color: "rgba(0, 128, 255)", 
+          width,
+          opacity,
+        };
+      }).filter(Boolean) as any[];
     }
 
-    // 2. Game Review (green arrow)
-    if (fullGameAnalysis && activePly >= 0 && activePly < fullGameAnalysis.moves.length) {
-      const bMove = fullGameAnalysis.moves[activePly].bestMove;
-      if (bMove && bMove.length >= 4) {
+    // 2. Game Review arrows
+    if (fullGameAnalysis && viewPly !== null && viewPly >= 0 && viewPly < fullGameAnalysis.moves.length) {
+      const activeData = fullGameAnalysis.moves[viewPly];
+      const arrows = [];
+      
+      const bMove = activeData.bestMove;
+      if (bMove && bMove.length >= 4 && bMove !== "(none)") {
         arrows.push({
           from: bMove.substring(0, 2),
           to: bMove.substring(2, 4),
-          color: "rgba(102, 187, 106, 0.8)", // green
+          color: "rgba(100, 200, 100)", // slightly distinct green for engine best move in review
+          width: 2.0,
+          opacity: 0.8,
         });
       }
-    }
-
-    // Deduplicate: if blue and green point to the same move, only show green (or blue).
-    // Let's filter out green if it's identical to blue, or vice versa.
-    // Since blue is current turn evaluation, and green is previous turn evaluation, they rarely overlap exactly.
-    const uniqueArrows = [];
-    const seen = new Set();
-    for (const arr of arrows) {
-      const key = `${arr.from}-${arr.to}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        uniqueArrows.push(arr);
+      
+      const pMove = moves[viewPly];
+      if (pMove && pMove.from && pMove.to) {
+        const playedStr = pMove.from + pMove.to;
+        if (playedStr !== bMove) {
+          arrows.push({
+            from: pMove.from,
+            to: pMove.to,
+            color: "rgba(255, 100, 100)", // red for what they actually played if it wasn't best
+            width: 1.5,
+            opacity: 0.6,
+          });
+        }
       }
+      return arrows.length > 0 ? arrows : null;
     }
-
-    return uniqueArrows.length > 0 ? uniqueArrows : null;
-  }, [fullGameAnalysis, analysis, viewPly, moves.length, engineEnabled, gameOver]);
+    
+    return null;
+  }, [fullGameAnalysis, analysis, viewPly, moves.length, engineEnabled]);
 
   useEffect(() => {
     if (!game || game.status === "playing" || !engineEnabled) {
@@ -466,7 +494,7 @@ export default function GameClient() {
     let eventSource: EventSource | null = null;
     let isDone = false;
     const timeout = window.setTimeout(() => {
-      eventSource = new EventSource(`/api/analysis/stream?fen=${encodeURIComponent(displayFen)}&depth=${analysisDepth}`);
+      eventSource = new EventSource(`/api/analysis/stream?fen=${encodeURIComponent(displayFen)}&depth=${analysisDepth}&multipv=${multiPV}`);
       eventSource.onmessage = (e) => {
         if (cancelled) {
           eventSource?.close();
@@ -504,7 +532,7 @@ export default function GameClient() {
       clearTimeout(timeout);
       eventSource?.close();
     };
-  }, [displayFen, gameId, viewPly, analysisDepth, engineEnabled, game?.status]);
+  }, [displayFen, analysisDepth, multiPV, engineEnabled, game?.status]);
 
   const displayMoves = useMemo(() => {
     if (optimistic) {
@@ -1154,56 +1182,87 @@ export default function GameClient() {
                       <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${engineEnabled ? 'translate-x-4' : 'translate-x-1'}`} />
                     </button>
                   </div>
-                  {engineEnabled && (
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] text-[var(--text-muted)]">
-                        {analysisLoading ? "Analyzing" : analysis?.depth ? `Depth ${analysis.depth}` : "Idle"}
-                      </span>
-                      {analysisDepth < 99 && (
-                        <button 
-                          onClick={() => setAnalysisDepth(d => Math.min(99, d + 10))}
-                          title="Increase depth by 10"
-                          className="flex items-center justify-center w-5 h-5 rounded bg-[#444] text-white hover:bg-[var(--accent)] transition-colors text-[12px] font-bold"
-                        >
-                          +
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {!engineEnabled ? (
-                  <p className="text-xs text-[var(--text-secondary)] py-1">Enable engine to see live evaluation and best moves.</p>
-                ) : analysisError ? (
-                  <p className="text-sm text-[var(--text-secondary)]">{analysisError}</p>
-                ) : analysis ? (
-                  <div className="space-y-3">
-                    <div className="rounded-lg border border-white/8 bg-black/20 p-3">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-[var(--text-secondary)]">Eval</span>
-                        <span className="font-semibold text-[var(--text-primary)]">{analysis.scoreText}</span>
+                      <div className="flex flex-col items-end gap-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-[var(--text-muted)]">
+                            {!engineEnabled ? "Off" : analysisLoading ? "Analyzing" : analysis?.depth ? `Depth ${analysis.depth}` : "Idle"}
+                          </span>
+                          {engineEnabled && (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                min="1"
+                                max="99"
+                                value={analysisDepth}
+                                onChange={(e) => setAnalysisDepth(Math.min(99, Math.max(1, parseInt(e.target.value) || 20)))}
+                                title="Engine Depth"
+                                className="w-10 bg-[#222] text-xs text-center border border-white/10 rounded px-1 py-0.5 focus:outline-none focus:border-[var(--accent)]"
+                              />
+                              <select
+                                value={multiPV}
+                                onChange={(e) => setMultiPV(parseInt(e.target.value))}
+                                title="Number of lines"
+                                className="bg-[#222] text-xs border border-white/10 rounded px-1 py-0.5 focus:outline-none focus:border-[var(--accent)]"
+                              >
+                                {[1,2,3,4,5].map(n => <option key={n} value={n}>{n} {n === 1 ? 'Line' : 'Lines'}</option>)}
+                              </select>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    <div>
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] mb-1">
-                        Best line
-                      </p>
-                      <p className="text-sm text-[var(--text-primary)]">
-                        {analysis.bestMoveSan ?? analysis.bestMove ?? "Calculating..."}
-                      </p>
-                      {((analysis.pvSan?.length > 0 ? analysis.pvSan : analysis.pv) || []).length > 0 && (
-                        <p className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">
-                          {(analysis.pvSan?.length > 0 ? analysis.pvSan : analysis.pv).slice(1).join(" ")}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-[var(--text-secondary)]">
-                    {analysisLoading ? "Analyzing current position…" : "Waiting for engine data…"}
-                  </p>
-                )}
+                    {analysisError ? (
+                      <p className="text-sm text-[var(--text-secondary)] py-1">{analysisError}</p>
+                    ) : !engineEnabled ? (
+                      <p className="text-xs text-[var(--text-secondary)] py-1">Enable engine to see live evaluation and best moves.</p>
+                    ) : analysis ? (
+                      <div className="space-y-3">
+                        <div className="rounded-lg border border-white/8 bg-black/20 p-3">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-[var(--text-secondary)]">Eval</span>
+                            <span className="font-semibold text-[var(--text-primary)]">{analysis.scoreText}</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3 mt-2">
+                          {(!analysis.lines || analysis.lines.length === 0) ? (
+                            <div>
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] mb-1">
+                                Best line
+                              </p>
+                              <p className="text-sm text-[var(--text-primary)] font-medium">
+                                {analysis.bestMoveSan ?? analysis.bestMove ?? "Calculating..."}
+                              </p>
+                              {((analysis.pvSan?.length > 0 ? analysis.pvSan : analysis.pv) || []).length > 0 && (
+                                <p className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">
+                                  {(analysis.pvSan?.length > 0 ? analysis.pvSan : analysis.pv).slice(1).join(" ")}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            analysis.lines.map((line, idx) => (
+                              <div key={idx} className="bg-black/10 rounded p-2 border border-white/5">
+                                <div className="flex items-center justify-between mb-1">
+                                  <p className="text-[11px] font-medium text-[var(--text-primary)]">
+                                    Line {line.multipv}
+                                  </p>
+                                  <span className="text-xs font-semibold text-[var(--text-primary)]">
+                                    {line.scoreText}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-[var(--text-primary)] font-medium">
+                                  {(line.pvSan?.length > 0 ? line.pvSan : line.pv)[0] || ""}
+                                </p>
+                                <p className="text-xs text-[var(--text-secondary)] line-clamp-1 mt-0.5" title={(line.pvSan?.length > 0 ? line.pvSan : line.pv).slice(1).join(" ")}>
+                                  {(line.pvSan?.length > 0 ? line.pvSan : line.pv).slice(1).join(" ")}
+                                </p>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
                 </div>
               )}
 

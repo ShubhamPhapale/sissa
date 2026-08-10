@@ -44,6 +44,7 @@ export default function AnalysisClient() {
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [analysisDepth, setAnalysisDepth] = useState(20);
+  const [multiPV, setMultiPV] = useState(1);
 
   const activePly = viewPly ?? moves.length - 1;
   const displayState = states[activePly + 1];
@@ -74,7 +75,8 @@ export default function AnalysisClient() {
       if (!active) return;
       const query = new URLSearchParams({
         fen: displayFen,
-        depth: analysisDepth.toString()
+        depth: analysisDepth.toString(),
+        multipv: multiPV.toString()
       });
       evtSource = new EventSource(`/api/analysis/stream?${query.toString()}`);
 
@@ -118,7 +120,7 @@ export default function AnalysisClient() {
       clearTimeout(timer);
       if (evtSource) evtSource.close();
     };
-  }, [displayFen, analysisDepth, analysisEnabled]);
+  }, [displayFen, analysisDepth, multiPV, analysisEnabled]);
 
   const evalHeight = useMemo(() => {
     if (!analysis || !analysis.scoreText) return "50%";
@@ -130,15 +132,39 @@ export default function AnalysisClient() {
   }, [analysis]);
 
   const bestMoveArrows = useMemo(() => {
-    const bMove = analysis?.bestMove || (analysis?.pv && analysis.pv[0]);
-    if (bMove && bMove.length >= 4 && bMove !== "(none)") {
-      return [{
+    if (!analysis) return null;
+    
+    if (!analysis.lines || analysis.lines.length === 0) {
+      const bMove = analysis.bestMove || (analysis.pv && analysis.pv[0]);
+      if (bMove && bMove.length >= 4 && bMove !== "(none)") {
+        return [{
+          from: bMove.substring(0, 2),
+          to: bMove.substring(2, 4),
+          color: "rgba(0, 128, 255)", 
+          width: 2.2,
+          opacity: 1,
+        }];
+      }
+      return null;
+    }
+
+    const bestScore = analysis.lines[0].score;
+    return analysis.lines.map((line) => {
+      const bMove = line.pv[0];
+      if (!bMove || bMove.length < 4 || bMove === "(none)") return null;
+      
+      const scoreDiff = Math.max(0, Math.abs(bestScore - line.score) / 100); 
+      const opacity = Math.max(0.3, 1 - scoreDiff * 0.4);
+      const width = Math.max(0.8, 2.2 - scoreDiff * 0.6);
+
+      return {
         from: bMove.substring(0, 2),
         to: bMove.substring(2, 4),
-        color: "rgba(0, 128, 255, 0.7)", // blue arrow
-      }];
-    }
-    return null;
+        color: "rgba(0, 128, 255)", 
+        width,
+        opacity,
+      };
+    }).filter(Boolean) as any[];
   }, [analysis]);
 
   const handleMove = (m: Move) => {
@@ -289,19 +315,33 @@ export default function AnalysisClient() {
                     <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${analysisEnabled ? 'translate-x-4' : 'translate-x-1'}`} />
                   </button>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] text-[var(--text-muted)]">
-                    {!analysisEnabled ? "Off" : analysisLoading ? "Analyzing" : analysis?.depth ? `Depth ${analysis.depth}` : "Idle"}
-                  </span>
-                  {analysisEnabled && analysisDepth < 99 && (
-                    <button 
-                      onClick={() => setAnalysisDepth(d => Math.min(99, d + 10))}
-                      title="Increase depth by 10"
-                      className="flex items-center justify-center w-5 h-5 rounded bg-[#444] text-white hover:bg-[var(--accent)] transition-colors text-[12px] font-bold"
-                    >
-                      +
-                    </button>
-                  )}
+                <div className="flex flex-col items-end gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-[var(--text-muted)]">
+                      {!analysisEnabled ? "Off" : analysisLoading ? "Analyzing" : analysis?.depth ? `Depth ${analysis.depth}` : "Idle"}
+                    </span>
+                    {analysisEnabled && (
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min="1"
+                          max="99"
+                          value={analysisDepth}
+                          onChange={(e) => setAnalysisDepth(Math.min(99, Math.max(1, parseInt(e.target.value) || 20)))}
+                          title="Engine Depth"
+                          className="w-10 bg-[#222] text-xs text-center border border-white/10 rounded px-1 py-0.5 focus:outline-none focus:border-[var(--accent)]"
+                        />
+                        <select
+                          value={multiPV}
+                          onChange={(e) => setMultiPV(parseInt(e.target.value))}
+                          title="Number of lines"
+                          className="bg-[#222] text-xs border border-white/10 rounded px-1 py-0.5 focus:outline-none focus:border-[var(--accent)]"
+                        >
+                          {[1,2,3,4,5].map(n => <option key={n} value={n}>{n} {n === 1 ? 'Line' : 'Lines'}</option>)}
+                        </select>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -316,17 +356,40 @@ export default function AnalysisClient() {
                     </div>
                   </div>
 
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] mb-1">
-                      Best line
-                    </p>
-                    <p className="text-sm text-[var(--text-primary)]">
-                      {analysis.bestMoveSan ?? analysis.bestMove ?? "Calculating..."}
-                    </p>
-                    {((analysis.pvSan?.length > 0 ? analysis.pvSan : analysis.pv) || []).length > 0 && (
-                      <p className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">
-                        {(analysis.pvSan?.length > 0 ? analysis.pvSan : analysis.pv).slice(1).join(" ")}
-                      </p>
+                  <div className="space-y-3 mt-2">
+                    {(!analysis.lines || analysis.lines.length === 0) ? (
+                      <div>
+                        <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] mb-1">
+                          Best line
+                        </p>
+                        <p className="text-sm text-[var(--text-primary)] font-medium">
+                          {analysis.bestMoveSan ?? analysis.bestMove ?? "Calculating..."}
+                        </p>
+                        {((analysis.pvSan?.length > 0 ? analysis.pvSan : analysis.pv) || []).length > 0 && (
+                          <p className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">
+                            {(analysis.pvSan?.length > 0 ? analysis.pvSan : analysis.pv).slice(1).join(" ")}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      analysis.lines.map((line, idx) => (
+                        <div key={idx} className="bg-black/10 rounded p-2 border border-white/5">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-[11px] font-medium text-[var(--text-primary)]">
+                              Line {line.multipv}
+                            </p>
+                            <span className="text-xs font-semibold text-[var(--text-primary)]">
+                              {line.scoreText}
+                            </span>
+                          </div>
+                          <p className="text-xs text-[var(--text-primary)] font-medium">
+                            {(line.pvSan?.length > 0 ? line.pvSan : line.pv)[0] || ""}
+                          </p>
+                          <p className="text-xs text-[var(--text-secondary)] line-clamp-1 mt-0.5" title={(line.pvSan?.length > 0 ? line.pvSan : line.pv).slice(1).join(" ")}>
+                            {(line.pvSan?.length > 0 ? line.pvSan : line.pv).slice(1).join(" ")}
+                          </p>
+                        </div>
+                      ))
                     )}
                   </div>
                 </div>
