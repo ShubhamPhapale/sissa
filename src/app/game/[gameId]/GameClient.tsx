@@ -450,6 +450,7 @@ export default function GameClient() {
     }
 
     let cancelled = false;
+    setAnalysis(null);
     setAnalysisLoading(true);
     setAnalysisError(null);
 
