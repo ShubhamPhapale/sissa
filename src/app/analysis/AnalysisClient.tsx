@@ -60,10 +60,10 @@ export default function AnalysisClient() {
     let active = true;
     let evtSource: EventSource | null = null;
     
-    setAnalysis(null);
     setAnalysisError(null);
     
     if (!analysisEnabled) {
+      setAnalysis(null);
       setAnalysisLoading(false);
       return;
     }
@@ -211,7 +211,10 @@ export default function AnalysisClient() {
           {/* Board Area */}
           <div className="w-full flex flex-col items-center" style={{ maxWidth: 'min(680px, calc(100vh - 180px))' }}>
             <div className="flex flex-row items-stretch gap-2 w-full">
-              <div className="w-4 rounded bg-[#333] overflow-hidden flex flex-col-reverse shadow-inner shrink-0 relative">
+              <div 
+                className="w-4 rounded bg-[#333] overflow-hidden flex flex-col-reverse shadow-inner shrink-0 relative transition-transform duration-500"
+                style={{ transform: boardFlipped ? "rotate(180deg)" : "none" }}
+              >
                 <div 
                   className="w-full bg-[#f0f0f0] transition-all duration-500 ease-out absolute bottom-0"
                   style={{ height: evalHeight }}

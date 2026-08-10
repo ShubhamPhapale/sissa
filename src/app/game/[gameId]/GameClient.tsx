@@ -452,14 +452,14 @@ export default function GameClient() {
   }, [fullGameAnalysis, analysis, viewPly, moves.length, engineEnabled, gameOver]);
 
   useEffect(() => {
-    setAnalysis(null);
     if (!game || game.status === "playing" || !engineEnabled) {
+      setAnalysis(null);
       setAnalysisError(null);
       return;
     }
 
     let cancelled = false;
-    setAnalysis(null);
+    // Do NOT clear analysis here to allow lazy evaluation display
     setAnalysisLoading(true);
     setAnalysisError(null);
 
@@ -916,7 +916,10 @@ export default function GameClient() {
                 {/* Eval Bar + Board */}
                 <div className="flex flex-row items-stretch gap-2 w-full">
                   {gameOver && (
-                    <div className="w-4 rounded bg-[#333] overflow-hidden flex flex-col-reverse shadow-inner shrink-0 relative">
+                    <div 
+                      className="w-4 rounded bg-[#333] overflow-hidden flex flex-col-reverse shadow-inner shrink-0 relative transition-transform duration-500"
+                      style={{ transform: boardFlipped ? "rotate(180deg)" : "none" }}
+                    >
                       <div 
                         className="w-full bg-[#f0f0f0] transition-all duration-500 ease-out absolute bottom-0"
                         style={{ height: evalHeight }}

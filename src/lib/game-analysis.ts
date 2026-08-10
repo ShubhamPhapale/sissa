@@ -185,12 +185,30 @@ export async function analyzeGame(
         classification = "mistake";
       } else if (cpLoss >= 50) {
         classification = "inaccuracy";
-      } else if (cpLoss >= 20) {
-        classification = "good";
-      } else if (cpLoss >= 10) {
-        classification = "excellent";
       } else {
-        classification = "best";
+        // Evaluate for Great / Brilliant using win probability swings
+        const wpBefore = getWinProb(isWhite ? evalBefore : -evalBefore);
+        const wpAfter = getWinProb(isWhite ? evalAfter : -evalAfter);
+        
+        // If you were losing/drawing (wp < 0.4) and found a move that swings it heavily (wp > 0.6)
+        const isGameChanger = wpBefore < 0.4 && wpAfter > 0.6;
+        
+        // If the move outperforms expectations massively (e.g. finding a forced mate or huge material win that wasn't obvious)
+        const isMassiveSwing = (isWhite ? evalAfter - evalBefore : evalBefore - evalAfter) > 300;
+
+        if (cpLoss === 0 && (isGameChanger || isMassiveSwing)) {
+          // Approximate Brilliant: game changer + absolute best move
+          classification = "brilliant";
+        } else if (cpLoss <= 10 && isGameChanger) {
+          // Approximate Great: Huge swing but maybe not the absolute #1 move (or second best)
+          classification = "great";
+        } else if (cpLoss >= 20) {
+          classification = "good";
+        } else if (cpLoss >= 10) {
+          classification = "excellent";
+        } else {
+          classification = "best";
+        }
       }
 
       const acc = getMoveAccuracy(evalBefore, evalAfter, isWhite);
