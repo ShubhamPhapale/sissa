@@ -57,10 +57,10 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             </p>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <StatBox title="Bullet" value={user.bulletRating} />
-              <StatBox title="Blitz" value={user.blitzRating} />
-              <StatBox title="Rapid" value={user.rapidRating} />
-              <StatBox title="Classical" value={user.classicalRating} />
+              <StatBox title="Bullet" value={user.bulletRating} icon="🚀" />
+              <StatBox title="Blitz" value={user.blitzRating} icon="⚡" />
+              <StatBox title="Rapid" value={user.rapidRating} icon="⏱️" />
+              <StatBox title="Classical" value={user.classicalRating} icon="🐢" />
             </div>
           </div>
           
@@ -89,71 +89,119 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
           ) : (
             <div className="card overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-[var(--border)] text-xs text-[var(--text-muted)] uppercase tracking-wider bg-[var(--bg-input)]">
-                      <th className="p-4 font-medium pl-6">Result</th>
-                      <th className="p-4 font-medium">Opponent</th>
-                      <th className="p-4 font-medium">Time Control</th>
-                      <th className="p-4 font-medium">Accuracy</th>
-                      <th className="p-4 font-medium text-right pr-6">Date</th>
+                      <th className="p-3 font-medium pl-6 w-20 text-center">Time</th>
+                      <th className="p-3 font-medium">Players</th>
+                      <th className="p-3 font-medium w-20 text-center">Result</th>
+                      <th className="p-3 font-medium w-24 text-center">Accuracy</th>
+                      <th className="p-3 font-medium w-16 text-center">Moves</th>
+                      <th className="p-3 font-medium text-right pr-6 w-28">Date</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--border)]">
                     {recentGames.map((game) => {
                       const isWhite = game.whitePlayerId === user.id;
-                      const opponent = isWhite ? game.blackPlayerName : game.whitePlayerName;
                       
-                      let resultText = "Draw";
-                      let resultColor = "bg-gray-600 text-gray-100";
+                      // Result blocks
+                      let userWon = false;
+                      let isDraw = false;
+                      if (game.winner === "draw") {
+                        isDraw = true;
+                      } else if ((game.winner === "w" && isWhite) || (game.winner === "b" && !isWhite)) {
+                        userWon = true;
+                      }
                       
-                      if (game.winner === "w") {
-                        resultText = isWhite ? "Won" : "Lost";
-                        resultColor = isWhite ? "bg-green-600/90 text-[var(--text-primary)]" : "bg-red-600/90 text-[var(--text-primary)]";
-                      } else if (game.winner === "b") {
-                        resultText = !isWhite ? "Won" : "Lost";
-                        resultColor = !isWhite ? "bg-green-600/90 text-[var(--text-primary)]" : "bg-red-600/90 text-[var(--text-primary)]";
-                      } else if (game.status === "aborted") {
-                        resultText = "Aborted";
-                        resultColor = "bg-yellow-600/80 text-[var(--text-primary)]";
+                      const whiteScore = game.winner === "w" ? "1" : game.winner === "b" ? "0" : "½";
+                      const blackScore = game.winner === "b" ? "1" : game.winner === "w" ? "0" : "½";
+
+                      let resultBlock = null;
+                      if (isDraw) {
+                        resultBlock = <div className="w-4 h-4 bg-[#8c8a88] rounded-sm flex items-center justify-center text-[11px] font-bold text-white leading-none">=</div>;
+                      } else if (userWon) {
+                        resultBlock = <div className="w-4 h-4 bg-[#81b64c] rounded-sm flex items-center justify-center text-[11px] font-bold text-white leading-none">+</div>;
+                      } else {
+                        resultBlock = <div className="w-4 h-4 bg-[#cc3333] rounded-sm flex items-center justify-center text-[11px] font-bold text-white leading-none">-</div>;
                       }
 
-                      // Accuracy logic (assuming analysis has .whiteAccuracy or .blackAccuracy)
-                      let accuracy = null;
+                      // Accuracy logic
+                      let whiteAcc = null;
+                      let blackAcc = null;
                       if (game.analysis) {
                         try {
                           const parsed = typeof game.analysis === "string" ? JSON.parse(game.analysis) : game.analysis;
-                          accuracy = isWhite ? parsed.whiteAccuracy : parsed.blackAccuracy;
+                          whiteAcc = parsed.whiteAccuracy;
+                          blackAcc = parsed.blackAccuracy;
                         } catch {}
                       }
 
+                      // Move count
+                      const fenParts = game.fen.split(" ");
+                      const fullMoveNumber = parseInt(fenParts[5] || "1", 10);
+                      const turn = fenParts[1];
+                      const moveCount = turn === "w" ? (fullMoveNumber - 1) * 2 : (fullMoveNumber - 1) * 2 + 1;
+                      const displayMovesCount = Math.ceil(moveCount / 2); // full moves
+
+                      // Time control icon
+                      let icon = "⏱️";
+                      let tcName = "Rapid";
+                      if (game.timeControl < 180) {
+                        icon = "🚀";
+                        tcName = "Bullet";
+                      } else if (game.timeControl < 600) {
+                        icon = "⚡";
+                        tcName = "Blitz";
+                      }
+                      
+                      const tcText = game.timeControl < 60 ? `${game.timeControl}s` : `${game.timeControl / 60} min`;
+
                       return (
                         <tr key={game.id} className="hover:bg-white/[0.03] transition-colors group">
-                          <td className="p-4 pl-6 font-medium">
-                            <span className={`inline-flex px-2 py-1 rounded text-xs font-bold tracking-wide ${resultColor}`}>
-                              {resultText}
-                            </span>
+                          <td className="p-3 pl-6">
+                            <div className="flex flex-col items-center justify-center text-[var(--text-secondary)]">
+                              <span className="text-xl leading-none mb-1">{icon}</span>
+                              <span className="text-xs whitespace-nowrap">{tcText}</span>
+                            </div>
                           </td>
-                          <td className="p-4">
-                            <Link href={`/game/${game.id}`} className="flex items-center gap-3">
-                              <span className={`w-3 h-3 shrink-0 rounded-sm ${isWhite ? 'bg-white shadow-sm' : 'bg-gray-800 border border-gray-600'}`} />
-                              <span className="font-bold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors">
-                                {opponent || "Anonymous"} 
-                              </span>
+                          <td className="p-3">
+                            <Link href={`/game/${game.id}`} className="flex flex-col gap-1 group-hover:opacity-80 transition-opacity">
+                              <div className={`flex items-center gap-2 ${isWhite ? "font-bold text-[var(--text-primary)]" : "text-[var(--text-secondary)]"}`}>
+                                <div className="w-3 h-3 bg-white border border-gray-400 rounded-sm shadow-sm" />
+                                <span>{game.whitePlayerName || "Anonymous"}</span>
+                              </div>
+                              <div className={`flex items-center gap-2 ${!isWhite ? "font-bold text-[var(--text-primary)]" : "text-[var(--text-secondary)]"}`}>
+                                <div className="w-3 h-3 bg-[#2b2b2b] border border-[#111] rounded-sm shadow-sm" />
+                                <span>{game.blackPlayerName || "Anonymous"}</span>
+                              </div>
                             </Link>
                           </td>
-                          <td className="p-4 text-[var(--text-secondary)] font-mono text-sm">
-                            {formatTime(game.timeControl)}{game.increment ? `+${game.increment}` : ""}
+                          <td className="p-3 text-center">
+                            <div className="flex items-center justify-center gap-3">
+                              <div className="flex flex-col gap-1 text-[var(--text-primary)] font-mono text-sm leading-tight">
+                                <span className={isWhite && userWon ? "font-bold" : ""}>{whiteScore}</span>
+                                <span className={!isWhite && userWon ? "font-bold" : ""}>{blackScore}</span>
+                              </div>
+                              {resultBlock}
+                            </div>
                           </td>
-                          <td className="p-4">
-                            {accuracy !== null && accuracy !== undefined ? (
-                              <span className="text-sm font-bold text-[var(--accent)]">{Number(accuracy).toFixed(1)}%</span>
+                          <td className="p-3 text-center">
+                            {whiteAcc !== null && blackAcc !== null && whiteAcc !== undefined && blackAcc !== undefined ? (
+                              <div className="flex flex-col gap-1 text-[var(--text-primary)] text-xs font-mono leading-tight">
+                                <span>{Number(whiteAcc).toFixed(1)}</span>
+                                <span>{Number(blackAcc).toFixed(1)}</span>
+                              </div>
                             ) : (
-                              <span className="text-xs text-[var(--text-muted)]">-</span>
+                              <Link href={`/game/${game.id}`} className="text-xs text-[#3b82f6] font-bold hover:underline">
+                                Review
+                              </Link>
                             )}
                           </td>
-                          <td className="p-4 text-right text-[var(--text-muted)] text-sm pr-6">
-                            {new Date(game.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          <td className="p-3 text-center text-[var(--text-secondary)] font-mono">
+                            {displayMovesCount}
+                          </td>
+                          <td className="p-3 text-right text-[var(--text-muted)] text-xs pr-6">
+                            {new Date(game.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                           </td>
                         </tr>
                       );
@@ -172,12 +220,19 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   );
 }
 
-function StatBox({ title, value }: { title: string; value: number }) {
+function StatBox({ title, value, icon }: { title: string; value: number; icon: React.ReactNode }) {
   return (
-    <div className="card bg-[var(--bg-input)] border-transparent p-3 flex flex-col items-center justify-center h-full">
-      <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1">{title}</div>
-      <div className="text-lg font-bold text-[var(--text-primary)]">
-        {value === 1500 ? "?" : value}
+    <div className="card bg-[#1b1917]/50 border-transparent p-4 flex flex-col h-full rounded-xl hover:bg-[#1b1917]/80 transition-colors">
+      <div className="flex items-start gap-4 mb-2">
+        <div className="text-4xl">{icon}</div>
+        <div className="flex flex-col">
+          <div className="text-sm font-semibold text-[#a3a3a3]">{title}</div>
+          <div className="flex items-baseline gap-2">
+            <div className="text-3xl font-bold text-white tracking-tight">
+              {value === 1500 ? "?" : value}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
