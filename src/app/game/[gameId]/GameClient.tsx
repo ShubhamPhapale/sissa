@@ -867,20 +867,10 @@ export default function GameClient() {
               </div>
             </div>
           )}
-          {!isLiveView && (
-            <div className="mb-4 p-3 rounded-xl bg-yellow-900/20 border border-yellow-700/40 text-sm flex items-center justify-between">
-              <span className="font-medium text-yellow-500">
-                {optimistic ? "Exploring variations" : `Reviewing move ${viewPly! + 1} of ${moves.length}`}
-              </span>
-              <button onClick={() => { setViewPly(null); setOptimistic(null); }} className="btn btn-secondary text-xs">
-                Return to live
-              </button>
-            </div>
-          )}
 
           <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:items-start lg:justify-center w-full max-w-[1250px] mx-auto px-2 sm:px-4">
             {/* Board */}
-            <div className="w-full flex flex-col items-center order-1 lg:order-1" style={{ maxWidth: 'min(800px, calc(100vh - 140px))' }}>
+            <div className={`w-full flex flex-col items-center order-1 lg:order-1 transition-all duration-300 ${optimistic ? "saturate-50 opacity-90" : ""}`} style={{ maxWidth: 'min(800px, calc(100vh - 140px))' }}>
               <div className="w-full flex flex-col gap-1">
                 {/* Top Timer */}
                 <div className="w-full flex">

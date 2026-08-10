@@ -40,7 +40,9 @@ export default function Header() {
                 <Link href={`/profile/${encodeURIComponent(user.username)}`} className="flex items-center gap-2 text-[var(--text-primary)] hover:text-[var(--text-primary)] transition-colors group">
                   <span className="text-sm font-bold group-hover:underline">{user.username}</span>
                 </Link>
-                <button onClick={() => logout()} className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] hover:text-red-400 transition-colors">Logout</button>
+                <Link href="/settings" className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+                  Settings
+                </Link>
               </div>
             ) : (
               <>
@@ -93,7 +95,13 @@ export default function Header() {
                     <span className="w-6 h-6 bg-[var(--accent)] text-white rounded flex items-center justify-center text-xs">{user.username[0].toUpperCase()}</span>
                     {user.username}
                   </Link>
-                  <button onClick={() => { logout(); setMenuOpen(false); }} className="text-xs font-semibold uppercase tracking-wider text-red-400">Logout</button>
+                  <Link 
+                    href="/settings"
+                    onClick={() => setMenuOpen(false)}
+                    className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                  >
+                    Settings
+                  </Link>
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">
