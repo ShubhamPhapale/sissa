@@ -207,7 +207,7 @@ export async function analyzeGame(
         fen: fenBeforeMove,
         evalBefore,
         evalAfter,
-        bestMove: bestMoveForThisTurn,
+        bestMove: bestMoveSanForThisTurn || bestMoveForThisTurn,
         bestEval: evalAfter,
         cpLoss: Math.abs(evalBefore - evalAfter),
         classification,
