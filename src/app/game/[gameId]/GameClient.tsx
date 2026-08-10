@@ -907,7 +907,7 @@ export default function GameClient() {
                       onMove={handleMove}
                       lastMove={lastMove}
                       boardFlipped={boardFlipped}
-                      interactive={Boolean((isMyTurn && isLiveView && !isSpectator) || gameOver)}
+                      interactive={Boolean((isLiveView && !isSpectator) || gameOver)}
                       allowBothColors={gameOver}
                       lastMoveClassification={currentClassification}
                       bestMoveArrows={bestMoveArrows}
