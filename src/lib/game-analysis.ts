@@ -129,6 +129,9 @@ export async function analyzeGame(
   let previousBestMove: string | null = null;
   let previousBestMoveSan: string | null = null;
   
+  // Track expected material to prevent flagging subsequent non-sacrifices as brilliant
+  let expectedPvMat = getMaterialBalance(state.board);
+  
   try {
     // Request 2 lines to find the gap between the best move and the second best move
     const initial = await analyzePosition(currentFen, 18, 20, undefined, undefined, undefined, 0, 2);
@@ -216,10 +219,16 @@ export async function analyzeGame(
             
             const pvEndMat = getMaterialBalance(tempState.board);
             const ourPvEndMat = isWhite ? pvEndMat.w - pvEndMat.b : pvEndMat.b - pvEndMat.w;
+            const ourPrevExpected = isWhite ? expectedPvMat.w - expectedPvMat.b : expectedPvMat.b - expectedPvMat.w;
             
-            if (ourPvEndMat <= ourMatBefore - 2) {
+            // For a move to be a sacrifice, the engine's expected material at the end of the line
+            // must be strictly worse than the expected material from the previous turn!
+            // This prevents a piece that was ALREADY left hanging from triggering brilliant again.
+            if (ourPvEndMat <= ourMatBefore - 2 && ourPvEndMat < ourPrevExpected) {
               isSacrifice = true;
             }
+            
+            expectedPvMat = pvEndMat;
           }
         }
       } catch {
