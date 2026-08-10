@@ -165,23 +165,6 @@ export async function analyzeGame(
         break;
       }
       
-      let isSacrifice = false;
-      const oppLegals = getAllLegalMoves(nextState);
-      for (const oppMove of oppLegals) {
-         // Optimization: only consider captures
-         if (nextState.board[oppMove.to.row][oppMove.to.col] !== null || oppMove.enPassant) {
-            const stateAfterOpp = makeMove(nextState, oppMove);
-            const matAfterOpp = getMaterialBalance(stateAfterOpp.board);
-            const ourMatAfterOpp = isWhite ? matAfterOpp.w - matAfterOpp.b : matAfterOpp.b - matAfterOpp.w;
-            // If the opponent can legally capture something such that we are down in material 
-            // relative to the start of the turn (by at least 2 points e.g. exchange or piece), it's a sacrifice.
-            if (ourMatAfterOpp <= ourMatBefore - 2) {
-               isSacrifice = true;
-               break;
-            }
-         }
-      }
-
       state = nextState;
       currentFen = stateToFEN(state);
 
@@ -192,6 +175,7 @@ export async function analyzeGame(
       let nextBestMoveSan: string | null = null;
 
       let secondBestGap = 0;
+      let isSacrifice = false;
       try {
         const result = await analyzePosition(currentFen, 12, 20, undefined, undefined, undefined, 0, 2);
         if (result) {
@@ -203,6 +187,39 @@ export async function analyzeGame(
           
           if (result.lines && result.lines.length > 1) {
             secondBestGap = Math.abs(result.lines[0].score - result.lines[1].score);
+          }
+          
+          if (result.lines && result.lines.length > 0) {
+            const pv = result.lines[0].pv;
+            let tempState = state; // 'state' is now the position AFTER the move
+            for (let j = 0; j < Math.min(pv.length, 5); j++) {
+              const moveStr = pv[j];
+              const fromStr = moveStr.substring(0, 2);
+              const toStr = moveStr.substring(2, 4);
+              const promotion = moveStr.length > 4 ? moveStr[4] : undefined;
+              
+              const legals = getAllLegalMoves(tempState);
+              const moveMatch = legals.find(m => 
+                algebraicToSquare(fromStr).row === m.from.row &&
+                algebraicToSquare(fromStr).col === m.from.col &&
+                algebraicToSquare(toStr).row === m.to.row &&
+                algebraicToSquare(toStr).col === m.to.col &&
+                m.promotion === promotion
+              );
+              
+              if (moveMatch) {
+                tempState = makeMove(tempState, moveMatch);
+              } else {
+                break;
+              }
+            }
+            
+            const pvEndMat = getMaterialBalance(tempState.board);
+            const ourPvEndMat = isWhite ? pvEndMat.w - pvEndMat.b : pvEndMat.b - pvEndMat.w;
+            
+            if (ourPvEndMat <= ourMatBefore - 2) {
+              isSacrifice = true;
+            }
           }
         }
       } catch {
