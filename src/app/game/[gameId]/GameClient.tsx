@@ -616,8 +616,8 @@ export default function GameClient() {
     async (move: Move) => {
       if (!game || busy) return;
 
-      // Allow exploratory moves locally when the game is finished
-      if (game.status === "finished") {
+      // Allow exploratory moves locally when the game is finished or we are exploring a variation/past move
+      if (game.status === "finished" || viewPly !== null || optimistic !== null) {
         let base = viewPly !== null ? viewPly + 1 : moves.length;
         let vMoves: Move[] = [];
         if (optimistic && optimistic.plies === optimistic.basePly + optimistic.variationMoves.length) {
@@ -913,8 +913,8 @@ export default function GameClient() {
                       onMove={handleMove}
                       lastMove={lastMove}
                       boardFlipped={boardFlipped}
-                      interactive={Boolean((isLiveView && !isSpectator) || gameOver)}
-                      allowBothColors={gameOver}
+                      interactive={Boolean((isLiveView && !isSpectator) || gameOver || viewPly !== null || optimistic !== null)}
+                      allowBothColors={Boolean(gameOver || viewPly !== null || optimistic !== null)}
                       lastMoveClassification={currentClassification}
                       bestMoveArrows={bestMoveArrows}
                     />
