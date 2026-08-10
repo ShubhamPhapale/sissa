@@ -181,7 +181,8 @@ class StockfishSingleton {
     skillLevel: number = 20,
     translateSan?: SanTranslator,
     onProgress?: (info: Partial<StockfishAnalysis>) => void,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    movetime?: number
   ): Promise<StockfishAnalysis | null> {
     // Only used directly inside the file anyway.
 
@@ -190,7 +191,7 @@ class StockfishSingleton {
         return resolve(null);
       }
 
-      this.queue.push({ fen, depth, skillLevel, translateSan, onProgress, resolve, signal });
+      this.queue.push({ fen, depth, skillLevel, translateSan, onProgress, resolve, signal, movetime: movetime ?? 2000 });
       
       if (signal) {
         signal.addEventListener("abort", () => {
@@ -203,9 +204,6 @@ class StockfishSingleton {
             resolve(null);
             this.currentResolve = null;
             this.currentProgress = null;
-            // DO NOT set isProcessing=false or processQueue() here!
-            // Wait for the worker to send 'bestmove' in response to 'stop',
-            // which will trigger the next item in the queue.
           }
         });
       }
@@ -238,19 +236,21 @@ class StockfishSingleton {
       }
 
       const skillLevel = (item as any).skillLevel ?? 20;
+      const movetime = (item as any).movetime;
       this.worker.send(`setoption name Skill Level value ${skillLevel}`);
       this.worker.send(`position fen ${item.fen}`);
-      // Add movetime to ensure the engine always terminates eventually, 
-      // preventing the WASM event loop from blocking indefinitely.
-      this.worker.send(`go depth ${item.depth} movetime 2000`);
-
-      // Allow 2.5 seconds maximum for a deeper search
-      this.currentTimeout = setTimeout(() => {
-        if (this.currentResolve) {
-          this.worker?.send("stop");
-          // wait for bestmove to trigger resolve
-        }
-      }, 2500);
+      
+      if (movetime && movetime > 0) {
+        this.worker.send(`go depth ${item.depth} movetime ${movetime}`);
+        // Allow movetime + 500ms maximum for a deeper search
+        this.currentTimeout = setTimeout(() => {
+          if (this.currentResolve) {
+            this.worker?.send("stop");
+          }
+        }, movetime + 500);
+      } else {
+        this.worker.send(`go depth ${item.depth}`);
+      }
       
     } catch (err) {
       console.error("Error starting analysis", err);

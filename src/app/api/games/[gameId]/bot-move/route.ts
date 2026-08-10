@@ -28,17 +28,32 @@ export async function POST(
     if ((state.turn === 'w' && !isWhiteBot) || (state.turn === 'b' && !isBlackBot)) {
       return NextResponse.json({ error: "Not bot's turn" }, { status: 400 });
     }
-    
+
     // Parse bot level
     const botName = isWhiteBot ? game.whitePlayerName : game.blackPlayerName;
     const match = botName?.match(/Level (\d+)/);
     const level = match ? Math.max(1, Math.min(12, parseInt(match[1]))) : 5;
-    // Scale level (1-12) to SkillLevel (0-20) and Depth (1-12)
-    const skillLevel = Math.round(((level - 1) / 11) * 20);
-    const depth = Math.round(1 + ((level - 1) / 11) * 11);
+    
+    // Calibrate bots from absolute beginner (Level 1) to Super GM (Level 12)
+    const botConfigs = [
+      { depth: 1, skill: 0, time: 50 },     // Level 1: Absolute beginner
+      { depth: 2, skill: 1, time: 100 },    // Level 2
+      { depth: 3, skill: 3, time: 150 },    // Level 3
+      { depth: 4, skill: 5, time: 200 },    // Level 4
+      { depth: 5, skill: 7, time: 300 },    // Level 5: Intermediate
+      { depth: 7, skill: 9, time: 400 },    // Level 6
+      { depth: 9, skill: 11, time: 500 },   // Level 7
+      { depth: 11, skill: 13, time: 700 },  // Level 8
+      { depth: 13, skill: 15, time: 1000 }, // Level 9
+      { depth: 15, skill: 17, time: 1300 }, // Level 10
+      { depth: 17, skill: 19, time: 1600 }, // Level 11
+      { depth: 20, skill: 20, time: 2000 }, // Level 12: Super GM
+    ];
+    
+    const config = botConfigs[level - 1] || botConfigs[4];
 
     // Ask stockfish for best move
-    const analysis = await analyzePosition(game.fen, depth, skillLevel);
+    const analysis = await analyzePosition(game.fen, config.depth, config.skill, undefined, undefined, undefined, config.time);
     
     let chosen;
     if (analysis && analysis.bestMove) {

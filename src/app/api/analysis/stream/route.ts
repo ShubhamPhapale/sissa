@@ -32,7 +32,8 @@ export async function GET(req: NextRequest) {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'progress', ...progress })}\n\n`));
           } catch (e) {}
         }, 
-        req.signal
+        req.signal,
+        0 // movetime 0 means no time limit, search until depth or aborted
       );
 
       try {

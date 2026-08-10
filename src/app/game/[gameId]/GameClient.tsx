@@ -353,7 +353,7 @@ export default function GameClient() {
         .catch(() => {});
       return () => controller.abort();
     }
-  }, [game]);
+  }, [game?.id, game?.status, game?.turn, game?.fen, game?.whitePlayerName, game?.blackPlayerName]);
 
   const liveState = useMemo<GameState>(
     () => (game ? parseFEN(game.fen) : createInitialState()),
