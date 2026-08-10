@@ -160,23 +160,24 @@ export async function analyzeGame(
 
       // Check if any of our pieces were ALREADY hanging before we made our move.
       // We do this by temporarily giving the opponent the turn and seeing if they can win material.
-      const stateForOpponent = { ...state, turn: isWhite ? "b" : "w" as "w" | "b" };
-      const oppLegalsBefore = getAllLegalMoves(stateForOpponent);
-      let maxMaterialLossBefore = 0;
+      const stateForOpponentBefore = { ...state, turn: isWhite ? "b" : "w" as "w" | "b" };
+      const oppLegalsBefore = getAllLegalMoves(stateForOpponentBefore);
+      let materialLossBefore = 0;
       for (const oppMove of oppLegalsBefore) {
         // Optimization: only consider captures
-        if (stateForOpponent.board[oppMove.to.row][oppMove.to.col] !== null || oppMove.enPassant) {
-          const testState = makeMove(stateForOpponent, oppMove);
+        if (stateForOpponentBefore.board[oppMove.to.row][oppMove.to.col] !== null || oppMove.enPassant) {
+          const testState = makeMove(stateForOpponentBefore, oppMove);
           const testMat = getMaterialBalance(testState.board);
           const ourTestMat = isWhite ? testMat.w - testMat.b : testMat.b - testMat.w;
           const loss = ourMatBefore - ourTestMat;
-          if (loss > maxMaterialLossBefore) {
-            maxMaterialLossBefore = loss;
+          if (loss > materialLossBefore) {
+            materialLossBefore = loss;
           }
         }
       }
 
       // Apply the move to get the next position.
+      const stateBeforeOurMove = state;
       const nextState = applyMoveFromRecord(state, move);
       if (!nextState) {
         // Illegal move — skip remainder.
@@ -208,37 +209,38 @@ export async function analyzeGame(
           }
           
           if (result.lines && result.lines.length > 0) {
-            const pv = result.lines[0].pv;
-            let tempState = state; // 'state' is now the position AFTER the move
-            for (let j = 0; j < Math.min(pv.length, 5); j++) {
-              const moveStr = pv[j];
-              const fromStr = moveStr.substring(0, 2);
-              const toStr = moveStr.substring(2, 4);
-              const promotion = moveStr.length > 4 ? moveStr[4] : undefined;
-              
-              const legals = getAllLegalMoves(tempState);
-              const moveMatch = legals.find(m => 
-                algebraicToSquare(fromStr).row === m.from.row &&
-                algebraicToSquare(fromStr).col === m.from.col &&
-                algebraicToSquare(toStr).row === m.to.row &&
-                algebraicToSquare(toStr).col === m.to.col &&
-                m.promotion === promotion
-              );
-              
-              if (moveMatch) {
-                tempState = makeMove(tempState, moveMatch);
-              } else {
-                break;
+            // Find max material opponent can win IMMEDIATELY after our move
+            const oppLegalsAfter = getAllLegalMoves(state);
+            let materialLossAfter = 0;
+            let capturedPieceWeJustMoved = false;
+
+            // Find the move object we just played
+            const legalsBeforeOurMove = getAllLegalMoves(stateBeforeOurMove);
+            const moveWeJustPlayed = legalsBeforeOurMove.find(m => m.san === move.san);
+
+            for (const oppMove of oppLegalsAfter) {
+              if (state.board[oppMove.to.row][oppMove.to.col] !== null || oppMove.enPassant) {
+                const testState = makeMove(state, oppMove);
+                const testMat = getMaterialBalance(testState.board);
+                const ourTestMat = isWhite ? testMat.w - testMat.b : testMat.b - testMat.w;
+                const loss = ourMatBefore - ourTestMat;
+                
+                if (loss > materialLossAfter) {
+                  materialLossAfter = loss;
+                }
+
+                // If this capture targets the square we just moved to, and it loses material!
+                if (loss >= 2 && moveWeJustPlayed && oppMove.to.row === moveWeJustPlayed.to.row && oppMove.to.col === moveWeJustPlayed.to.col) {
+                  capturedPieceWeJustMoved = true;
+                }
               }
             }
             
-            const pvEndMat = getMaterialBalance(tempState.board);
-            const ourPvEndMat = isWhite ? pvEndMat.w - pvEndMat.b : pvEndMat.b - pvEndMat.w;
-            
-            // For a move to be a sacrifice, the engine's expected material at the end of the line
-            // must be strictly worse than the material we had before the move.
-            // AND the material lost must be GREATER than what was ALREADY hanging before we made our move!
-            if (ourPvEndMat <= ourMatBefore - 2 && ourPvEndMat <= ourMatBefore - maxMaterialLossBefore - 2) {
+            // For a move to be a sacrifice:
+            // 1. The opponent must be able to capture material immediately (loss >= 2)
+            // 2. AND either they capture the exact piece we just moved (direct sacrifice)
+            //    OR the material they can capture NOW is strictly greater than what they could capture BEFORE our move (leaving a new piece hanging)
+            if (materialLossAfter >= 2 && (capturedPieceWeJustMoved || materialLossAfter > materialLossBefore)) {
               isSacrifice = true;
             }
           }
