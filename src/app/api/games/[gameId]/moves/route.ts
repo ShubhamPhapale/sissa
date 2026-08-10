@@ -133,9 +133,11 @@ export async function POST(
       .orderBy(asc(movesTable.moveNumber), asc(movesTable.id));
 
     const ply = priorMoves.length + 1;
+    const fullSan = san + (chosen.checkmate ? "#" : chosen.check ? "+" : "");
+
     const pgn = buildPgn([
       ...priorMoves.map((m) => m.san),
-      san + (chosen.checkmate ? "#" : chosen.check ? "+" : ""),
+      fullSan,
     ]);
 
     const [updated] = await db
@@ -161,7 +163,7 @@ export async function POST(
       .values({
         gameId,
         moveNumber: ply,
-        san,
+        san: fullSan,
         from: squareToAlgebraic(chosen.from),
         to: squareToAlgebraic(chosen.to),
         piece: chosen.piece as string,

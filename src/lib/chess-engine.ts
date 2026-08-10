@@ -733,8 +733,10 @@ export function createSanTranslator(initialFen: string) {
 
       if (!move) break; // Invalid move sequence
 
-      sanMoves.push(generateSAN(state, move));
       state = makeMove(state, move);
+      const recorded = state.moveHistory[state.moveHistory.length - 1];
+      const suffix = recorded.checkmate ? "#" : recorded.check ? "+" : "";
+      sanMoves.push((recorded.san || "") + suffix);
     }
     return sanMoves;
   };

@@ -240,8 +240,7 @@ export default function GameAnalysis({
           }
         >
           <span className="font-mono text-sm">
-            {move.san}
-            {move.checkmate ? "#" : move.check ? "+" : ""}
+            {move.san}{(move.san.endsWith('+') || move.san.endsWith('#')) ? "" : (move.checkmate ? "#" : move.check ? "+" : "")}
           </span>
           {mAnalysis && (
             <span

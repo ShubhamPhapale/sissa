@@ -81,7 +81,8 @@ export async function POST(
 
     const priorMoves = await db.select().from(movesTable).where(eq(movesTable.gameId, gameId)).orderBy(asc(movesTable.moveNumber), asc(movesTable.id));
     const ply = priorMoves.length + 1;
-    const pgn = buildPgn([...priorMoves.map((m) => m.san), san + (chosen!.checkmate ? "#" : chosen!.check ? "+" : "")]);
+    const fullSan = san + (chosen!.checkmate ? "#" : chosen!.check ? "+" : "");
+    const pgn = buildPgn([...priorMoves.map((m) => m.san), fullSan]);
 
     const [updated] = await db.update(games).set({
       fen: stateToFEN(nextState),
@@ -99,7 +100,7 @@ export async function POST(
     const [inserted] = await db.insert(movesTable).values({
       gameId,
       moveNumber: ply,
-      san,
+      san: fullSan,
       from: squareToAlgebraic(chosen!.from),
       to: squareToAlgebraic(chosen!.to),
       piece: chosen!.piece as string,

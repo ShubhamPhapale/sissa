@@ -97,7 +97,8 @@ function MoveEntry({
 }) {
   if (!move || ply === undefined) return <div className="flex-1" />;
 
-  const suffix = move.checkmate ? "#" : move.check ? "+" : "";
+  const hasSuffix = move.san.endsWith('+') || move.san.endsWith('#');
+  const suffix = hasSuffix ? "" : (move.checkmate ? "#" : move.check ? "+" : "");
 
   return (
     <button
@@ -106,8 +107,7 @@ function MoveEntry({
       onClick={() => onClick?.(ply)}
     >
       <span className="font-mono">
-        {move.san}
-        {suffix}
+        {move.san}{suffix}
       </span>
     </button>
   );
