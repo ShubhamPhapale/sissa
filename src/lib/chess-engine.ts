@@ -741,3 +741,34 @@ export function createSanTranslator(initialFen: string) {
     return sanMoves;
   };
 }
+
+export function parsePGN(pgn: string, startFen: string = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"): { moves: Move[], states: GameState[] } {
+  const states = [parseFEN(startFen)];
+  const moves: Move[] = [];
+  
+  // Strip annotations and comments
+  let cleanPgn = pgn.replace(/\{[^}]*\}/g, "");
+  // Strip move numbers
+  cleanPgn = cleanPgn.replace(/\d+\.+/g, "");
+  // Strip result
+  cleanPgn = cleanPgn.replace(/(1-0|0-1|1\/2-1\/2|\*)/g, "");
+  
+  const tokens = cleanPgn.trim().split(/\s+/).filter(Boolean);
+  
+  let currentState = states[0];
+  for (const token of tokens) {
+    const legals = getAllLegalMoves(currentState);
+    const cleanToken = token.replace(/[+#!?]/g, "");
+    const move = legals.find(m => generateSAN(currentState, m) === cleanToken);
+    
+    if (!move) {
+      throw new Error(`Invalid or illegal move in PGN: ${token} at FEN: ${stateToFEN(currentState)}`);
+    }
+    
+    moves.push(move);
+    currentState = makeMove(currentState, move);
+    states.push(currentState);
+  }
+  
+  return { moves, states };
+}

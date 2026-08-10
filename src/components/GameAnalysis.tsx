@@ -52,7 +52,7 @@ export default function GameAnalysis({
       const response = await fetch("/api/analysis/game", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gameId }),
+        body: JSON.stringify(gameId ? { gameId } : { moves }),
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));

@@ -10,10 +10,15 @@ export const maxDuration = 300;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
+    if (body.moves && Array.isArray(body.moves)) {
+      const analysis = await analyzeGame(body.moves);
+      return NextResponse.json({ analysis });
+    }
+
     const gameId = String(body.gameId ?? "").trim();
 
     if (!gameId) {
-      return NextResponse.json({ error: "gameId is required" }, { status: 400 });
+      return NextResponse.json({ error: "gameId or moves are required" }, { status: 400 });
     }
 
     // Verify the game exists and is finished.
