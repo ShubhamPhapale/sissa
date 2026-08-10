@@ -909,7 +909,7 @@ export default function GameClient() {
                     blackName={nameFor("b")}
                     myColor={myColor}
                     onRematch={isSpectator ? undefined : rematch}
-                    onReview={() => setViewPly(Math.max(0, moves.length - 1))}
+                    onReview={moves.length > 0 ? () => setViewPly(Math.max(0, moves.length - 1)) : undefined}
                   />
                 )}
 
