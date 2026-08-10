@@ -6,24 +6,20 @@ export default function OnlinePlayers() {
   const [onlineCount, setOnlineCount] = useState(0);
 
   useEffect(() => {
-    // Generate a pseudo-random number of online players that changes slowly
-    const getCount = () => {
-      const now = new Date();
-      // Base count depends on the hour of the day (peak at 20:00 UTC)
-      const hour = now.getUTCHours();
-      const peak = 20;
-      const dist = Math.abs(hour - peak);
-      const baseCount = 5000 - (dist * 150);
-      
-      // Add some random noise (-50 to +50)
-      const noise = Math.floor(Math.random() * 100) - 50;
-      return baseCount + noise;
+    const fetchOnline = async () => {
+      try {
+        const res = await fetch("/api/online-players");
+        if (res.ok) {
+          const data = await res.json();
+          setOnlineCount(data.count || 0);
+        }
+      } catch {
+        // Silent failure
+      }
     };
 
-    setOnlineCount(getCount());
-    const interval = setInterval(() => {
-      setOnlineCount(getCount());
-    }, 15000); // update every 15 seconds
+    fetchOnline();
+    const interval = setInterval(fetchOnline, 15000); // update every 15 seconds
 
     return () => clearInterval(interval);
   }, []);

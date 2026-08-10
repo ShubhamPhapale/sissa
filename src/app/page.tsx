@@ -265,9 +265,48 @@ export default function Home() {
         </section>
 
         <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,1.05fr),minmax(420px,0.95fr)] lg:items-start">
-          {/* Create game */}
-          <div id="new-game" className="card h-full p-6 md:p-7 relative overflow-hidden">
-            {!user && !authLoading && (
+          
+          {/* Left Column: Lobby */}
+          <div className="flex flex-col gap-6 h-full">
+            <div className="card flex flex-col overflow-hidden h-[500px]">
+              <div className="bg-[var(--bg-card)] border-b border-[var(--border)] px-4 py-4 sticky top-0 z-10 flex items-center justify-between">
+                <h3 className="font-bold text-lg text-[var(--text-primary)] flex items-center gap-2">
+                  Lobby <span className="text-xs bg-[var(--accent)] text-white px-2 py-0.5 rounded-full">{lobbyGames.length}</span>
+                </h3>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                {lobbyGames.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-[var(--text-muted)] p-6 text-center">
+                    <p className="mb-2">No active challenges right now.</p>
+                    <p className="text-sm">Create a Quick Match to invite others to play!</p>
+                  </div>
+                ) : (
+                  lobbyGames.map(g => (
+                    <button
+                      key={g.id}
+                      onClick={() => handleJoinLobby(g.id)}
+                      className="w-full text-left px-4 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-input)] transition-colors flex items-center justify-between group"
+                    >
+                      <div>
+                        <div className="font-semibold text-[var(--text-primary)]">{g.username}</div>
+                        <div className="text-xs text-[var(--text-secondary)]">{g.rating} Rating</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-mono text-sm text-[var(--text-primary)] font-bold">{Math.floor(g.timeControl/60)}{g.increment > 0 ? `+${g.increment}` : ""}</div>
+                        <div className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider group-hover:text-[var(--accent)] transition-colors">Play</div>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Create game & Recent games */}
+          <div className="flex flex-col gap-6 h-full">
+            {/* Create game */}
+            <div id="new-game" className="card p-6 md:p-7 relative overflow-hidden">
+              {!user && !authLoading && (
               <div className="mb-6 p-4 rounded-lg bg-blue-900/20 border border-blue-500/30">
                 <h3 className="text-sm font-bold text-blue-300 mb-1">Play Ranked Games</h3>
                 <p className="text-xs text-blue-200/70 mb-3">
@@ -385,40 +424,11 @@ export default function Home() {
                 </div>
               </>
             )}
-            
-            {/* Lobby List */}
-            {!inQueue && lobbyGames.length > 0 && (
-              <div className="card flex flex-col overflow-hidden mb-6 md:mb-0 mt-6">
-                <div className="bg-[var(--bg-card)] border-b border-[var(--border)] px-4 py-3 sticky top-0 z-10 flex items-center justify-between">
-                  <h3 className="font-bold text-[var(--text-primary)] flex items-center gap-2">
-                    Lobby <span className="text-xs bg-[var(--accent)] text-white px-2 py-0.5 rounded-full">{lobbyGames.length}</span>
-                  </h3>
-                </div>
-                <div className="flex-1 overflow-y-auto max-h-[300px]">
-                  {lobbyGames.map(g => (
-                    <button
-                      key={g.id}
-                      onClick={() => handleJoinLobby(g.id)}
-                      className="w-full text-left px-4 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-input)] transition-colors flex items-center justify-between group"
-                    >
-                      <div>
-                        <div className="font-semibold text-[var(--text-primary)]">{g.username}</div>
-                        <div className="text-xs text-[var(--text-secondary)]">{g.rating} Rating</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-mono text-sm text-[var(--text-primary)] font-bold">{Math.floor(g.timeControl/60)}{g.increment > 0 ? `+${g.increment}` : ""}</div>
-                        <div className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider group-hover:text-[var(--accent)] transition-colors">Play</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
 
-          {/* Recent games */}
-          <div id="recent-games" className="card h-full p-6 md:p-7">
-            <h2 className="mb-4 text-xl font-bold">
+            {/* Recent games */}
+            <div id="recent-games" className="card p-6 md:p-7">
+              <h2 className="mb-4 text-xl font-bold">
               Recent games
             </h2>
 
