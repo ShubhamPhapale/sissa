@@ -3,6 +3,7 @@ import {
   createInitialState,
   generateLegalMoves,
   getAllLegalMoves,
+  applyMove,
   makeMove,
   stateToFEN,
   algebraicToSquare,
@@ -89,7 +90,7 @@ function getMaterialBalance(board: (string | null)[][]): { w: number, b: number 
  * Replays one move using the same pattern as `replayTo` / `repetitionCount`
  * in the existing codebase — find the legal move and apply it.
  */
-function applyMoveFromRecord(
+export function applyMoveFromRecord(
   state: GameState,
   m: { from: string; to: string; promotion: string | null }
 ): GameState | null {
@@ -146,6 +147,8 @@ export async function analyzeGame(
 
   let whiteAccTotal = 0;
   let blackAccTotal = 0;
+  
+  const pastStates: import("./chess-engine").GameState[] = [state];
 
   try {
     for (let i = 0; i < moveList.length; i++) {
@@ -159,20 +162,26 @@ export async function analyzeGame(
       const matBefore = getMaterialBalance(state.board);
       const ourMatBefore = isWhite ? matBefore.w - matBefore.b : matBefore.b - matBefore.w;
 
-      // Check if any of our pieces were ALREADY hanging before we made our move.
-      // We do this by temporarily giving the opponent the turn and seeing if they can win material.
-      const stateForOpponentBefore = { ...state, turn: isWhite ? "b" : "w" as "w" | "b" };
-      const oppLegalsBefore = getAllLegalMoves(stateForOpponentBefore);
+      // Check if any of our pieces were ALREADY hanging before the opponent's LAST move.
       let materialLossBefore = 0;
-      for (const oppMove of oppLegalsBefore) {
-        // Optimization: only consider captures
-        if (stateForOpponentBefore.board[oppMove.to.row][oppMove.to.col] !== null || oppMove.enPassant) {
-          const testState = makeMove(stateForOpponentBefore, oppMove);
-          const testMat = getMaterialBalance(testState.board);
-          const ourTestMat = isWhite ? testMat.w - testMat.b : testMat.b - testMat.w;
-          const loss = ourMatBefore - ourTestMat;
-          if (loss > materialLossBefore) {
-            materialLossBefore = loss;
+      if (i > 0) {
+        const stateBeforeOpponentsLastMove = pastStates[i - 1]; // This was the opponent's turn
+        const oppLegalsBefore = getAllLegalMoves(stateBeforeOpponentsLastMove);
+        for (const oppMove of oppLegalsBefore) {
+          if (stateBeforeOpponentsLastMove.board[oppMove.to.row][oppMove.to.col] !== null || oppMove.enPassant) {
+            const testState = applyMove(stateBeforeOpponentsLastMove, oppMove);
+            const testMat = getMaterialBalance(testState.board);
+            const ourTestMat = isWhite ? testMat.w - testMat.b : testMat.b - testMat.w;
+            
+            // ourMatBefore is the material we have NOW. 
+            // We must compare with the material we had BEFORE the opponent's last move.
+            const matPrev = getMaterialBalance(stateBeforeOpponentsLastMove.board);
+            const ourMatPrev = isWhite ? matPrev.w - matPrev.b : matPrev.b - matPrev.w;
+            
+            const loss = ourMatPrev - ourTestMat;
+            if (loss > materialLossBefore) {
+              materialLossBefore = loss;
+            }
           }
         }
       }
@@ -186,6 +195,7 @@ export async function analyzeGame(
       }
       
       state = nextState;
+      pastStates.push(state);
       currentFen = stateToFEN(state);
 
       // Analyze the position AFTER the move.
@@ -221,7 +231,7 @@ export async function analyzeGame(
 
             for (const oppMove of oppLegalsAfter) {
               if (state.board[oppMove.to.row][oppMove.to.col] !== null || oppMove.enPassant) {
-                const testState = makeMove(state, oppMove);
+                const testState = applyMove(state, oppMove);
                 const testMat = getMaterialBalance(testState.board);
                 const ourTestMat = isWhite ? testMat.w - testMat.b : testMat.b - testMat.w;
                 const loss = ourMatBefore - ourTestMat;
