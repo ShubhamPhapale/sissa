@@ -134,7 +134,7 @@ export async function analyzeGame(
   
   try {
     // Request 2 lines to find the gap between the best move and the second best move
-    const initial = await analyzePosition(currentFen, 18, 20, undefined, undefined, undefined, 0, 2);
+    const initial = await analyzePosition(currentFen, 14, 20, undefined, undefined, undefined, 0, 2);
     if (initial) {
       const parsed = parseScoreText(initial.scoreText);
       previousEval = parsed.cp;
@@ -180,7 +180,7 @@ export async function analyzeGame(
       let secondBestGap = 0;
       let isSacrifice = false;
       try {
-        const result = await analyzePosition(currentFen, 18, 20, undefined, undefined, undefined, 0, 2);
+        const result = await analyzePosition(currentFen, 14, 20, undefined, undefined, undefined, 0, 2);
         if (result) {
           const parsed = parseScoreText(result.scoreText);
           evalAfter = parsed.cp;
