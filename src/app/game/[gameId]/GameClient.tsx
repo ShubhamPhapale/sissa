@@ -188,9 +188,11 @@ export default function GameClient() {
 
   // Optimistic position shown immediately after the local player moves.
   const [optimistic, setOptimistic] = useState<{
+    baseFen?: string;
     basePly: number;
     variationMoves: Move[];
     plies: number;
+    isRealMove?: boolean;
   } | null>(null);
 
   const [clocks, setClocks] = useState({ white: 0, black: 0 });
@@ -635,6 +637,7 @@ export default function GameClient() {
           basePly: base,
           variationMoves: vMoves,
           plies: base + vMoves.length,
+          isRealMove: false,
         });
         return;
       }
@@ -643,9 +646,11 @@ export default function GameClient() {
 
       // Show the move instantly, then reconcile with the server's answer.
       setOptimistic({
+        baseFen: game.fen,
         basePly: moves.length,
         variationMoves: [move],
-        plies: moves.length + 1
+        plies: moves.length + 1,
+        isRealMove: true,
       });
       setViewPly(null);
       setClockSnapshot((prev) => {
@@ -875,9 +880,9 @@ export default function GameClient() {
           )}
 
           <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:items-start lg:justify-center w-full max-w-[1250px] mx-auto px-2 sm:px-4">
-            {/* Board */}
-            <div className={`w-full flex flex-col items-center order-1 lg:order-1 transition-all duration-300 ${optimistic ? "saturate-50 opacity-90" : ""}`} style={{ maxWidth: 'min(800px, calc(100vh - 140px))' }}>
-              <div className="w-full flex flex-col gap-1">
+            {/* Central Play Area - optimized layout */}
+            <div className={`w-full flex flex-col items-center order-1 lg:order-1 transition-all duration-300 ${(optimistic && !optimistic.isRealMove) ? "saturate-50 opacity-90" : ""}`} style={{ maxWidth: 'min(800px, calc(100vh - 140px))' }}>
+              <div className="w-full flex flex-col gap-4">
                 {/* Top Timer */}
                 <div className="w-full flex">
                   {gameOver && <div className="w-4 shrink-0 mr-2" />}
@@ -917,6 +922,7 @@ export default function GameClient() {
                       allowBothColors={Boolean(gameOver || viewPly !== null || optimistic !== null)}
                       lastMoveClassification={currentClassification}
                       bestMoveArrows={bestMoveArrows}
+                      premovesEnabled={true}
                     />
                   </div>
                 </div>

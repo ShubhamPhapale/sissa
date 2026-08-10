@@ -38,6 +38,7 @@ export default function AnalysisClient() {
   const [viewPly, setViewPly] = useState<number | null>(null);
 
   // Analysis state
+  const [analysisEnabled, setAnalysisEnabled] = useState(true);
   const [analysis, setAnalysis] = useState<StockfishAnalysis | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
@@ -60,6 +61,12 @@ export default function AnalysisClient() {
     
     setAnalysis(null);
     setAnalysisError(null);
+    
+    if (!analysisEnabled) {
+      setAnalysisLoading(false);
+      return;
+    }
+    
     setAnalysisLoading(true);
 
     const startStream = () => {
@@ -103,7 +110,7 @@ export default function AnalysisClient() {
       clearTimeout(timer);
       if (evtSource) evtSource.close();
     };
-  }, [displayFen, analysisDepth]);
+  }, [displayFen, analysisDepth, analysisEnabled]);
 
   const evalHeight = useMemo(() => {
     if (!analysis || !analysis.scoreText) return "50%";
@@ -262,14 +269,22 @@ export default function AnalysisClient() {
 
             <div className="card p-3 shrink-0">
               <div className="flex items-center justify-between gap-2 mb-2">
-                <h4 className="text-xs text-[var(--text-muted)] uppercase tracking-wider">
-                  Stockfish
-                </h4>
+                <div className="flex items-center gap-3">
+                  <h4 className="text-xs text-[var(--text-muted)] uppercase tracking-wider">
+                    Stockfish
+                  </h4>
+                  <button
+                    onClick={() => setAnalysisEnabled(!analysisEnabled)}
+                    className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${analysisEnabled ? 'bg-[var(--accent)]' : 'bg-[#333]'}`}
+                  >
+                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${analysisEnabled ? 'translate-x-4' : 'translate-x-1'}`} />
+                  </button>
+                </div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-[11px] text-[var(--text-muted)]">
-                    {analysisLoading ? "Analyzing" : analysis?.depth ? `Depth ${analysis.depth}` : "Idle"}
+                    {!analysisEnabled ? "Off" : analysisLoading ? "Analyzing" : analysis?.depth ? `Depth ${analysis.depth}` : "Idle"}
                   </span>
-                  {analysisDepth < 99 && (
+                  {analysisEnabled && analysisDepth < 99 && (
                     <button 
                       onClick={() => setAnalysisDepth(d => Math.min(99, d + 10))}
                       title="Increase depth by 10"

@@ -32,6 +32,8 @@ interface ChessBoardProps {
   lastMoveClassification?: string | null;
   /** Best move arrows to display. */
   bestMoveArrows?: Array<{ from: string; to: string; color?: string }> | null;
+  /** Enable premoves when it is the opponent's turn. */
+  premovesEnabled?: boolean;
 }
 
 export default function ChessBoard({
@@ -44,6 +46,7 @@ export default function ChessBoard({
   allowBothColors = false,
   lastMoveClassification = null,
   bestMoveArrows = null,
+  premovesEnabled = false,
 }: ChessBoardProps) {
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [legalMoves, setLegalMoves] = useState<Move[]>([]);
