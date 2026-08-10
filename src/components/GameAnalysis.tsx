@@ -159,10 +159,10 @@ export default function GameAnalysis({
           onMouseLeave={() => setHoverPly(null)}
           onClick={() => hoverPly !== null && onMoveClick?.(hoverPly)}
         >
-          <rect x="0" y="0" width={width} height={midY} fill="rgba(241,245,249,0.05)" />
-          <rect x="0" y={midY} width={width} height={midY} fill="rgba(0,0,0,0.15)" />
-          <path d={whiteFillD} fill="rgba(241,245,249,0.25)" />
-          <path d={blackFillD} fill="rgba(30,30,30,0.5)" />
+          <rect x="0" y="0" width={width} height={midY} fill="rgba(0,0,0,0.02)" />
+          <rect x="0" y={midY} width={width} height={midY} fill="rgba(0,0,0,0.06)" />
+          <path d={whiteFillD} fill="rgba(180, 180, 180, 0.5)" />
+          <path d={blackFillD} fill="rgba(60, 60, 60, 0.5)" />
           <line x1="0" y1={midY} x2={width} y2={midY} stroke="var(--border)" strokeWidth="1" strokeDasharray="6 3" />
           <path d={lineD} fill="none" stroke="var(--accent)" strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
           
@@ -469,12 +469,12 @@ function MoveTimesChart({ moves, activePly, onMoveClick }: { moves: Array<{ move
           onClick={() => hoverPly !== null && onMoveClick?.(hoverPly)}
         >
           {/* Time Left Area */}
-          <path d={whiteAreaD} fill="rgba(255, 255, 255, 0.05)" />
-          <path d={blackAreaD} fill="rgba(0, 0, 0, 0.2)" />
+          <path d={whiteAreaD} fill="rgba(180, 180, 180, 0.15)" />
+          <path d={blackAreaD} fill="rgba(60, 60, 60, 0.15)" />
           
           {/* Time Left Lines */}
-          <path d={whiteLineD} fill="none" stroke="rgba(255, 255, 255, 0.2)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
-          <path d={blackLineD} fill="none" stroke="rgba(0, 0, 0, 0.4)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+          <path d={whiteLineD} fill="none" stroke="rgba(150, 150, 150, 0.8)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+          <path d={blackLineD} fill="none" stroke="rgba(60, 60, 60, 0.8)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
 
           {/* Center Axis */}
           <line x1="0" y1={centerY} x2={width} y2={centerY} stroke="var(--border)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
@@ -493,7 +493,7 @@ function MoveTimesChart({ moves, activePly, onMoveClick }: { moves: Array<{ move
                 y={isWhite ? centerY - barH : centerY}
                 width={w}
                 height={barH}
-                fill={activePly === i ? "var(--accent)" : isWhite ? "rgba(255,255,255,0.7)" : "rgba(100,100,100,0.7)"}
+                fill={activePly === i ? "var(--accent)" : isWhite ? "rgba(180, 180, 180, 0.9)" : "rgba(60, 60, 60, 0.9)"}
                 className="transition-all duration-300"
               />
             );

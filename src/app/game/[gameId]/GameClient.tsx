@@ -1035,11 +1035,43 @@ export default function GameClient() {
                             {cls === "mistake" && "Mistake. This gives up a significant advantage."}
                             {cls === "blunder" && "Blunder! This drastically changes the evaluation of the game."}
                           </div>
-                          {mData.bestMove && cls !== "best" && cls !== "book" && (
-                            <div className="mt-2 text-xs font-mono bg-[var(--bg-input)] px-2 py-1 rounded inline-block text-[var(--text-muted)]">
-                              Best: <span className="text-[var(--text-primary)]">{mData.bestMove}</span>
-                            </div>
-                          )}
+                          {(() => {
+                            const formatEval = (cp: number, isMate: boolean) => {
+                              if (isMate) return cp > 0 ? "+M" : "-M";
+                              const val = (cp / 100).toFixed(2);
+                              return cp > 0 ? `+${val}` : val;
+                            };
+                            return (
+                              <>
+                                {mData.bestMove && cls !== "best" && cls !== "book" && (
+                                  <div className="mt-3 flex flex-col gap-1">
+                                    <div className="text-xs font-mono bg-[var(--bg-input)] px-2 py-1.5 rounded text-[var(--text-primary)]">
+                                      <span className="text-[var(--text-muted)]">Played move eval: </span>
+                                      <span className={mData.evalAfter > 0 ? "text-green-500" : mData.evalAfter < 0 ? "text-red-500" : ""}>
+                                        {formatEval(mData.evalAfter, mData.isMate)}
+                                      </span>
+                                    </div>
+                                    <div className="text-xs font-mono bg-[var(--bg-input)] px-2 py-1.5 rounded text-[var(--text-primary)]">
+                                      <span className="text-[var(--text-muted)]">Best move: </span>
+                                      <strong>{mData.bestMove}</strong>
+                                      <span className="text-[var(--text-muted)] ml-2">eval: </span>
+                                      <span className={mData.evalBefore > 0 ? "text-green-500" : mData.evalBefore < 0 ? "text-red-500" : ""}>
+                                        {formatEval(mData.evalBefore, mData.isMate)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
+                                {(cls === "best" || cls === "book" || !mData.bestMove) && (
+                                  <div className="mt-3 text-xs font-mono bg-[var(--bg-input)] px-2 py-1.5 rounded inline-block text-[var(--text-primary)]">
+                                    <span className="text-[var(--text-muted)]">Eval: </span>
+                                    <span className={mData.evalAfter > 0 ? "text-green-500" : mData.evalAfter < 0 ? "text-red-500" : ""}>
+                                      {formatEval(mData.evalAfter, mData.isMate)}
+                                    </span>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
