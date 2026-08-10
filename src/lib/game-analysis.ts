@@ -129,9 +129,6 @@ export async function analyzeGame(
   let previousBestMove: string | null = null;
   let previousBestMoveSan: string | null = null;
   
-  // Track expected material to prevent flagging subsequent non-sacrifices as brilliant
-  let expectedPvMat = getMaterialBalance(state.board);
-  
   try {
     // Request 2 lines to find the gap between the best move and the second best move
     const initial = await analyzePosition(currentFen, 14, 20, undefined, undefined, undefined, 0, 2);
@@ -160,6 +157,24 @@ export async function analyzeGame(
 
       const matBefore = getMaterialBalance(state.board);
       const ourMatBefore = isWhite ? matBefore.w - matBefore.b : matBefore.b - matBefore.w;
+
+      // Check if any of our pieces were ALREADY hanging before we made our move.
+      // We do this by temporarily giving the opponent the turn and seeing if they can win material.
+      const stateForOpponent = { ...state, turn: isWhite ? "b" : "w" as "w" | "b" };
+      const oppLegalsBefore = getAllLegalMoves(stateForOpponent);
+      let maxMaterialLossBefore = 0;
+      for (const oppMove of oppLegalsBefore) {
+        // Optimization: only consider captures
+        if (stateForOpponent.board[oppMove.to.row][oppMove.to.col] !== null || oppMove.enPassant) {
+          const testState = makeMove(stateForOpponent, oppMove);
+          const testMat = getMaterialBalance(testState.board);
+          const ourTestMat = isWhite ? testMat.w - testMat.b : testMat.b - testMat.w;
+          const loss = ourMatBefore - ourTestMat;
+          if (loss > maxMaterialLossBefore) {
+            maxMaterialLossBefore = loss;
+          }
+        }
+      }
 
       // Apply the move to get the next position.
       const nextState = applyMoveFromRecord(state, move);
@@ -219,16 +234,13 @@ export async function analyzeGame(
             
             const pvEndMat = getMaterialBalance(tempState.board);
             const ourPvEndMat = isWhite ? pvEndMat.w - pvEndMat.b : pvEndMat.b - pvEndMat.w;
-            const ourPrevExpected = isWhite ? expectedPvMat.w - expectedPvMat.b : expectedPvMat.b - expectedPvMat.w;
             
             // For a move to be a sacrifice, the engine's expected material at the end of the line
-            // must be strictly worse than the expected material from the previous turn!
-            // This prevents a piece that was ALREADY left hanging from triggering brilliant again.
-            if (ourPvEndMat <= ourMatBefore - 2 && ourPvEndMat < ourPrevExpected) {
+            // must be strictly worse than the material we had before the move.
+            // AND the material lost must be GREATER than what was ALREADY hanging before we made our move!
+            if (ourPvEndMat <= ourMatBefore - 2 && ourPvEndMat <= ourMatBefore - maxMaterialLossBefore - 2) {
               isSacrifice = true;
             }
-            
-            expectedPvMat = pvEndMat;
           }
         }
       } catch {
