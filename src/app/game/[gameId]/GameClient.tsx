@@ -152,10 +152,15 @@ export default function GameClient() {
         if (replayMode === "fast") delay = 500;
         if (replayMode === "slow") delay = 1500;
         if (replayMode === "realtime") {
-          const nextMove = moves[cur + 1];
-          const prevMoveTime = cur >= 0 ? new Date(moves[cur].createdAt!).getTime() : new Date(game?.createdAt || Date.now()).getTime();
-          const nextMoveTime = new Date(nextMove.createdAt!).getTime();
-          delay = Math.max(200, nextMoveTime - prevMoveTime); // Exact actual time used
+          // The delay scheduled here is how long we wait AFTER showing cur+1, BEFORE showing cur+2.
+          // Therefore, the delay should be the think time for cur+2.
+          if (cur + 2 < moves.length) {
+            const currentMoveTime = new Date(moves[cur + 1].createdAt!).getTime();
+            const nextMoveTime = new Date(moves[cur + 2].createdAt!).getTime();
+            delay = Math.max(200, nextMoveTime - currentMoveTime);
+          } else {
+            delay = 1000;
+          }
         }
 
         timeoutId = setTimeout(playNext, delay);

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function SettingsPage() {
-  const { user, loading, logout, checkSession } = useAuth();
+  const { user, loading, logout, setUser } = useAuth();
   const router = useRouter();
 
   const [currentPassword, setCurrentPassword] = useState("");
@@ -70,7 +70,9 @@ export default function SettingsPage() {
       setCurrentPassword("");
       setNewPassword("");
       setNewUsername("");
-      await checkSession();
+      if (data.user) {
+        setUser(data.user);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
