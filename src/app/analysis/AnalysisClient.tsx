@@ -9,6 +9,7 @@ import {
   generateSAN,
   stateToFEN,
   algebraicToSquare,
+  squareToAlgebraic,
   GameState,
   Move,
   isInCheck,
@@ -83,12 +84,19 @@ export default function AnalysisClient() {
           const data = JSON.parse(event.data);
           if (data.type === "start") {
             setAnalysisLoading(false);
-          } else if (data.type === "progress") {
-            setAnalysis(data);
-          } else if (data.type === "done") {
-            isDone = true;
-            setAnalysis(data);
-            evtSource?.close();
+          } else if (data.type === "progress" || data.type === "done") {
+            if (data.type === "done") {
+              isDone = true;
+              evtSource?.close();
+            }
+            setAnalysis((prev) => {
+              if (prev && data.depth < prev.depth && prev.scoreText) {
+                // If the new analysis is shallower than what we already have, ignore it visually
+                // to prevent the "calculating from start" visual glitch when increasing depth
+                return prev;
+              }
+              return data;
+            });
           }
         } catch (err) {
           console.error("Parse error", err);
@@ -97,7 +105,7 @@ export default function AnalysisClient() {
 
       evtSource.onerror = () => {
         if (isDone) return;
-        setAnalysisError("Connection to analysis engine lost.");
+        setAnalysisLoading(false);
         evtSource?.close();
       };
     };
@@ -142,8 +150,8 @@ export default function AnalysisClient() {
     const nextState = makeMove(currentState, m);
     
     const apiMove: ApiMove = {
-      from: `${m.from.col}${m.from.row}`,
-      to: `${m.to.col}${m.to.row}`,
+      from: squareToAlgebraic(m.from),
+      to: squareToAlgebraic(m.to),
       promotion: m.promotion,
       san,
       piece: (m.piece as string) || "",
@@ -223,13 +231,14 @@ export default function AnalysisClient() {
               </div>
             </div>
 
-            <div className="mt-4 flex items-center gap-2">
+            <div className="mt-4 flex items-center justify-center gap-2">
               <button
                 onClick={() => setViewPly(-1)}
                 disabled={moves.length === 0}
-                className="btn btn-secondary text-xs disabled:opacity-40 px-3"
+                className="btn btn-secondary text-sm font-bold disabled:opacity-40 px-3 py-2"
+                title="First"
               >
-                First
+                &lt;&lt;
               </button>
               <button
                 onClick={() => setViewPly(p => {
@@ -237,36 +246,33 @@ export default function AnalysisClient() {
                   return Math.max(-1, cur - 1);
                 })}
                 disabled={moves.length === 0}
-                className="btn btn-secondary text-xs disabled:opacity-40 px-4"
+                className="btn btn-secondary text-sm font-bold disabled:opacity-40 px-4 py-2"
+                title="Prev"
               >
-                Prev
+                &lt;
               </button>
               <button
                 onClick={() => setViewPly(p => (p === null || p + 1 >= moves.length - 1 ? null : p + 1))}
                 disabled={viewPly === null}
-                className="btn btn-secondary text-xs disabled:opacity-40 px-4"
+                className="btn btn-secondary text-sm font-bold disabled:opacity-40 px-4 py-2"
+                title="Next"
               >
-                Next
+                &gt;
               </button>
               <button
                 onClick={() => setViewPly(null)}
                 disabled={viewPly === null}
-                className="btn btn-secondary text-xs disabled:opacity-40 px-3"
+                className="btn btn-secondary text-sm font-bold disabled:opacity-40 px-3 py-2"
+                title="Last"
               >
-                Last
+                &gt;&gt;
               </button>
             </div>
           </div>
 
           {/* Right Column: History & Stockfish */}
           <div className="w-full lg:w-[260px] xl:w-[320px] shrink-0 flex flex-col gap-4 lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)]">
-            <MoveHistory
-              moves={moves.map(m => ({ san: m.san, check: m.check, checkmate: m.checkmate }))}
-              activeMoveIndex={activePly}
-              onMoveClick={(i) => setViewPly(i === moves.length - 1 ? null : i)}
-              className="flex-1 min-h-0"
-            />
-
+            
             <div className="card p-3 shrink-0">
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="flex items-center gap-3">
@@ -288,7 +294,7 @@ export default function AnalysisClient() {
                     <button 
                       onClick={() => setAnalysisDepth(d => Math.min(99, d + 10))}
                       title="Increase depth by 10"
-                      className="flex items-center justify-center w-4 h-4 rounded bg-white/10 text-white hover:bg-[var(--accent)] transition-colors text-[10px]"
+                      className="flex items-center justify-center w-5 h-5 rounded bg-[#444] text-white hover:bg-[var(--accent)] transition-colors text-[12px] font-bold"
                     >
                       +
                     </button>
@@ -323,6 +329,13 @@ export default function AnalysisClient() {
                 </div>
               ) : null}
             </div>
+
+            <MoveHistory
+              moves={moves.map(m => ({ san: m.san, check: m.check, checkmate: m.checkmate }))}
+              activeMoveIndex={activePly}
+              onMoveClick={(i) => setViewPly(i === moves.length - 1 ? null : i)}
+              className="flex-1 min-h-0"
+            />
           </div>
         </div>
       </div>

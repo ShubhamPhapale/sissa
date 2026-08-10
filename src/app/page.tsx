@@ -33,6 +33,7 @@ export default function Home() {
   const [selectedTime, setSelectedTime] = useState(600);
   const [increment, setIncrement] = useState(0);
   const [botLevel, setBotLevel] = useState(5);
+  const [botColor, setBotColor] = useState<"w" | "b" | "random">("random");
   const [recentGames, setRecentGames] = useState<GameSummary[]>([]);
   const [lobbyGames, setLobbyGames] = useState<LobbyGame[]>([]);
   const [creating, setCreating] = useState(false);
@@ -198,12 +199,16 @@ export default function Home() {
     setCreating(true);
     setError(null);
     try {
+      const isUserWhite = botColor === "random" ? Math.random() > 0.5 : botColor === "b";
+      const userName = user ? user.username : "Anonymous";
+      const botName = `Stockfish (Level ${botLevel})`;
+      
       const res = await fetch("/api/games", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          whitePlayerName: user ? user.username : "Anonymous",
-          blackPlayerName: `Stockfish (Level ${botLevel})`,
+          whitePlayerName: isUserWhite ? userName : botName,
+          blackPlayerName: isUserWhite ? botName : userName,
           timeControl: selectedTime,
           increment,
         }),
@@ -213,7 +218,7 @@ export default function Home() {
         setError(data.error ?? "Could not create game");
         return;
       }
-      router.push(`/game/${data.game.id}?player=1`);
+      router.push(`/game/${data.game.id}?player=${isUserWhite ? "1" : "2"}`);
     } catch {
       setError("Network error — please try again");
     } finally {
@@ -398,22 +403,51 @@ export default function Home() {
                       )}
 
                       <div className="mt-auto">
-                        <label className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">
-                          Computer Level: {botLevel} {botLevel === 1 ? "(Beginner)" : botLevel === 12 ? "(Super GM)" : ""}
-                        </label>
-                        <div className="mb-6">
-                          <input
-                            type="range"
-                            min="1"
-                            max="12"
-                            value={botLevel}
-                            onChange={(e) => setBotLevel(parseInt(e.target.value))}
-                            className="w-full accent-[var(--accent)]"
-                          />
-                          <div className="flex justify-between text-[10px] text-[var(--text-muted)] mt-1 px-1 font-mono">
-                            <span>1</span>
-                            <span>6</span>
-                            <span>12</span>
+                        <div className="mb-6 space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">
+                              Computer Level: {botLevel} {botLevel === 1 ? "(Beginner)" : botLevel === 12 ? "(Super GM)" : ""}
+                            </label>
+                            <input
+                              type="range"
+                              min="1"
+                              max="12"
+                              value={botLevel}
+                              onChange={(e) => setBotLevel(parseInt(e.target.value))}
+                              className="w-full accent-[var(--accent)]"
+                            />
+                            <div className="flex justify-between text-[10px] text-[var(--text-muted)] mt-1 px-1 font-mono">
+                              <span>1</span>
+                              <span>6</span>
+                              <span>12</span>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium mb-2 text-[var(--text-secondary)]">
+                              I play as:
+                            </label>
+                            <div className="flex rounded-md bg-[var(--bg-input)] p-1 w-full max-w-[200px] mx-auto">
+                              <button
+                                onClick={() => setBotColor("b")}
+                                className={`flex-1 rounded text-sm py-1.5 transition-colors ${botColor === 'b' ? 'bg-white text-black shadow-sm font-medium' : 'text-[var(--text-secondary)] hover:text-white'}`}
+                              >
+                                White
+                              </button>
+                              <button
+                                onClick={() => setBotColor("random")}
+                                className={`flex-1 rounded text-2xl py-0.5 transition-colors leading-none ${botColor === 'random' ? 'bg-[#333] text-white shadow-sm' : 'text-[var(--text-secondary)] hover:text-white'}`}
+                                title="Random"
+                              >
+                                ⚄
+                              </button>
+                              <button
+                                onClick={() => setBotColor("w")}
+                                className={`flex-1 rounded text-sm py-1.5 transition-colors ${botColor === 'w' ? 'bg-black text-white border border-white/20 shadow-sm font-medium' : 'text-[var(--text-secondary)] hover:text-white'}`}
+                              >
+                                Black
+                              </button>
+                            </div>
                           </div>
                         </div>
 

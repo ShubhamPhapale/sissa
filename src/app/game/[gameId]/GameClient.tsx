@@ -169,7 +169,15 @@ export default function GameClient() {
     };
 
     // Initial kick-off delay
-    timeoutId = setTimeout(playNext, replayMode === "fast" ? 500 : 1000);
+    let initialDelay = replayMode === "fast" ? 500 : 1000;
+    if (replayMode === "realtime" && moves.length > 0 && viewPly === null) {
+      const start = game?.createdAt ? new Date(game.createdAt).getTime() : 0;
+      const firstMove = new Date(moves[0].createdAt!).getTime();
+      if (start > 0 && firstMove > start) {
+        initialDelay = Math.max(200, firstMove - start);
+      }
+    }
+    timeoutId = setTimeout(playNext, initialDelay);
 
     return () => clearTimeout(timeoutId);
   }, [replayMode, moves, game?.createdAt]);
@@ -259,7 +267,7 @@ export default function GameClient() {
       setOptimistic((prev) => {
         if (!prev) return null;
         const serverPlies = payloadMoves?.length ?? 0;
-        return serverPlies >= prev.plies ? null : prev;
+        return (prev.isRealMove || serverPlies >= prev.plies) ? null : prev;
       });
     },
     []
@@ -444,9 +452,8 @@ export default function GameClient() {
   }, [fullGameAnalysis, analysis, viewPly, moves.length, engineEnabled, gameOver]);
 
   useEffect(() => {
-    if (!game) return;
-    if (game.status === "playing" || !engineEnabled) {
-      setAnalysis(null);
+    setAnalysis(null);
+    if (!game || game.status === "playing" || !engineEnabled) {
       setAnalysisError(null);
       return;
     }
@@ -468,22 +475,27 @@ export default function GameClient() {
         try {
           const data = JSON.parse(e.data);
           if (data.type === 'progress' || data.type === 'done') {
-            setAnalysis((prev) => ({ ...prev, ...data } as StockfishAnalysis));
             if (data.type === 'done') {
               isDone = true;
               setAnalysisLoading(false);
               eventSource?.close();
             }
+            setAnalysis((prev) => {
+              if (prev && data.depth < prev.depth && prev.scoreText) {
+                return prev;
+              }
+              return { ...prev, ...data } as StockfishAnalysis;
+            });
           }
         } catch {
           // ignore parse errors
         }
       };
+
       eventSource.onerror = () => {
-        if (cancelled || isDone) return;
-        setAnalysisError("Analysis unavailable");
-        setAnalysisLoading(false);
+        if (isDone || cancelled) return;
         eventSource?.close();
+        setAnalysisLoading(false);
       };
     }, 150);
 
@@ -699,7 +711,7 @@ export default function GameClient() {
         setBusy(false);
       }
     },
-    [game, myColor, gameActive, busy, liveState, moves.length, gameId, applyPayload, refresh]
+    [game, myColor, gameActive, busy, liveState, moves.length, gameId, applyPayload, refresh, optimistic, viewPly]
   );
 
   const doAction = useCallback(
@@ -922,7 +934,7 @@ export default function GameClient() {
                       allowBothColors={Boolean(gameOver || viewPly !== null || optimistic !== null)}
                       lastMoveClassification={currentClassification}
                       bestMoveArrows={bestMoveArrows}
-                      premovesEnabled={true}
+                      premovesEnabled={Boolean(isLiveView && !optimistic && gameActive)}
                     />
                   </div>
                 </div>
@@ -1148,7 +1160,7 @@ export default function GameClient() {
                         <button 
                           onClick={() => setAnalysisDepth(d => Math.min(99, d + 10))}
                           title="Increase depth by 10"
-                          className="flex items-center justify-center w-4 h-4 rounded bg-white/10 text-white hover:bg-[var(--accent)] transition-colors text-[10px]"
+                          className="flex items-center justify-center w-5 h-5 rounded bg-[#444] text-white hover:bg-[var(--accent)] transition-colors text-[12px] font-bold"
                         >
                           +
                         </button>
