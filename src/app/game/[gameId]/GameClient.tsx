@@ -1196,13 +1196,13 @@ export default function GameClient() {
                                 value={analysisDepth}
                                 onChange={(e) => setAnalysisDepth(Math.min(99, Math.max(1, parseInt(e.target.value) || 20)))}
                                 title="Engine Depth"
-                                className="w-10 bg-[#222] text-xs text-center border border-white/10 rounded px-1 py-0.5 focus:outline-none focus:border-[var(--accent)]"
+                                className="w-10 bg-[#222] text-white text-xs text-center border border-white/10 rounded px-1 py-0.5 focus:outline-none focus:border-[var(--accent)]"
                               />
                               <select
                                 value={multiPV}
                                 onChange={(e) => setMultiPV(parseInt(e.target.value))}
                                 title="Number of lines"
-                                className="bg-[#222] text-xs border border-white/10 rounded px-1 py-0.5 focus:outline-none focus:border-[var(--accent)]"
+                                className="bg-[#222] text-white text-xs border border-white/10 rounded px-1 py-0.5 focus:outline-none focus:border-[var(--accent)]"
                               >
                                 {[1,2,3,4,5].map(n => <option key={n} value={n}>{n} {n === 1 ? 'Line' : 'Lines'}</option>)}
                               </select>
