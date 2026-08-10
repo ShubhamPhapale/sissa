@@ -18,7 +18,7 @@ class StockfishSingleton {
   
   private worker: ChildProcess | null = null;
   private isProcessing = false;
-  private queue: Array<{ fen: string; depth: number; skillLevel?: number; translateSan?: SanTranslator; onProgress?: (res: Partial<StockfishAnalysis>) => void; resolve: (res: StockfishAnalysis | null) => void; signal?: AbortSignal }> = [];
+  private queue: Array<{ fen: string; depth: number; skillLevel?: number; translateSan?: SanTranslator; onProgress?: (res: Partial<StockfishAnalysis>) => void; resolve: (res: StockfishAnalysis | null) => void; signal?: AbortSignal; movetime?: number }> = [];
   
   private initPromise: Promise<void> | null = null;
 
@@ -270,8 +270,9 @@ export async function analyzePosition(
   skillLevel: number = 20,
   translateSan?: SanTranslator,
   onProgress?: (info: Partial<StockfishAnalysis>) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  movetime?: number
 ): Promise<StockfishAnalysis | null> {
   const instance = StockfishSingleton.getInstance();
-  return instance.analyzePosition(fen, depth, skillLevel, translateSan, onProgress, signal);
+  return instance.analyzePosition(fen, depth, skillLevel, translateSan, onProgress, signal, movetime);
 }

@@ -449,9 +449,10 @@ export default function Home() {
           </div>
         </div>
 
-            {/* Recent games */}
-            <div id="recent-games" className="card p-6 md:p-7">
-              <h2 className="mb-4 text-xl font-bold">
+        <div className="mx-auto max-w-2xl">
+          {/* Recent games */}
+          <div id="recent-games" className="card p-6 md:p-7">
+            <h2 className="mb-4 text-xl font-bold">
               Recent games
             </h2>
 
@@ -496,7 +497,6 @@ export default function Home() {
               </div>
             )}
           </div>
-        </div>
         </div>
       </main>
     </div>
