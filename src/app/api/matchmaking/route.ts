@@ -12,21 +12,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { timeControl, increment } = await req.json();
+    const { timeControl, increment, joinMatchmakingId } = await req.json();
 
     const [user] = await db.select().from(users).where(eq(users.id, session.userId));
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
     // Find a match
-    const [opponent] = await db.select().from(matchmaking)
-      .where(
-        and(
-          not(eq(matchmaking.userId, session.userId)),
-          eq(matchmaking.timeControl, timeControl),
-          eq(matchmaking.increment, increment)
+    let opponent;
+    
+    if (joinMatchmakingId) {
+      const rows = await db.select().from(matchmaking)
+        .where(eq(matchmaking.id, joinMatchmakingId))
+        .limit(1);
+      if (rows.length > 0 && rows[0].userId !== session.userId) {
+        opponent = rows[0];
+      }
+    } else {
+      const rows = await db.select().from(matchmaking)
+        .where(
+          and(
+            not(eq(matchmaking.userId, session.userId)),
+            eq(matchmaking.timeControl, timeControl),
+            eq(matchmaking.increment, increment)
+          )
         )
-      )
-      .limit(1);
+        .limit(1);
+      opponent = rows[0];
+    }
 
     if (opponent) {
       // Attempt to atomically claim this opponent

@@ -7,6 +7,8 @@ import Link from "next/link";
 import { formatTime } from "@/lib/utils";
 import ProfileSettings from "@/components/ProfileSettings";
 import { User } from "@/components/AuthProvider";
+import { cookies } from "next/headers";
+import { verifyToken } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,11 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     return notFound();
   }
   const user = userResults[0];
+
+  const cookieStore = await cookies();
+  const token = cookieStore.get("session")?.value;
+  const session = token ? await verifyToken(token) : null;
+  const isOwnProfile = session?.username === user.username;
 
   // Fetch recent games
   const recentGames = await db
@@ -39,12 +46,12 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
         
         {/* Profile Header */}
         <div className="card p-6 md:p-8 flex flex-col md:flex-row gap-8 items-start mb-8">
-          <div className="w-24 h-24 shrink-0 rounded-2xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] shadow-xl shadow-orange-500/10 flex items-center justify-center text-4xl font-bold text-white uppercase">
+          <div className="w-24 h-24 shrink-0 rounded-2xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] shadow-xl shadow-orange-500/10 flex items-center justify-center text-4xl font-bold text-[var(--text-primary)] uppercase">
             {user.username.substring(0, 2)}
           </div>
           
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-white mb-2">{user.username}</h1>
+            <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">{user.username}</h1>
             <p className="text-[var(--text-secondary)] text-sm mb-6">
               Member since {new Date(user.createdAt).toLocaleDateString()}
             </p>
@@ -59,7 +66,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
           
           <div className="shrink-0 card bg-[var(--bg-input)] border-transparent w-full md:w-auto p-5 flex flex-col items-center justify-center">
             <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1">Win Rate</div>
-            <div className="text-4xl font-black text-white">{winRate}%</div>
+            <div className="text-4xl font-black text-[var(--text-primary)]">{winRate}%</div>
             <div className="text-xs text-[var(--text-secondary)] mt-1">{totalGames} games</div>
             <div className="flex items-center gap-3 text-sm font-bold mt-4 bg-[#1e1e1e] px-3 py-1.5 rounded-md shadow-inner">
               <span className="text-green-500 flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-green-500" />{user.wins}</span>
@@ -71,7 +78,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
         {/* Game History */}
         <div className="mb-8">
-          <h2 className="text-xl font-bold mb-4 px-1 text-white flex items-center gap-2">
+          <h2 className="text-xl font-bold mb-4 px-1 text-[var(--text-primary)] flex items-center gap-2">
             <span>⚔️</span> Recent Games
           </h2>
           
@@ -102,13 +109,13 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
                       
                       if (game.winner === "w") {
                         resultText = isWhite ? "Won" : "Lost";
-                        resultColor = isWhite ? "bg-green-600/90 text-white" : "bg-red-600/90 text-white";
+                        resultColor = isWhite ? "bg-green-600/90 text-[var(--text-primary)]" : "bg-red-600/90 text-[var(--text-primary)]";
                       } else if (game.winner === "b") {
                         resultText = !isWhite ? "Won" : "Lost";
-                        resultColor = !isWhite ? "bg-green-600/90 text-white" : "bg-red-600/90 text-white";
+                        resultColor = !isWhite ? "bg-green-600/90 text-[var(--text-primary)]" : "bg-red-600/90 text-[var(--text-primary)]";
                       } else if (game.status === "aborted") {
                         resultText = "Aborted";
-                        resultColor = "bg-yellow-600/80 text-white";
+                        resultColor = "bg-yellow-600/80 text-[var(--text-primary)]";
                       }
 
                       // Accuracy logic (assuming analysis has .whiteAccuracy or .blackAccuracy)
@@ -158,7 +165,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
           )}
         </div>
         
-        <ProfileSettings username={user.username} />
+        {isOwnProfile && <ProfileSettings username={user.username} />}
 
       </main>
     </div>
@@ -169,7 +176,7 @@ function StatBox({ title, value }: { title: string; value: number }) {
   return (
     <div className="card bg-[var(--bg-input)] border-transparent p-3 flex flex-col items-center justify-center h-full">
       <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1">{title}</div>
-      <div className="text-lg font-bold text-white">
+      <div className="text-lg font-bold text-[var(--text-primary)]">
         {value === 1500 ? "?" : value}
       </div>
     </div>

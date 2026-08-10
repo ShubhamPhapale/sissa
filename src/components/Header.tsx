@@ -26,7 +26,7 @@ export default function Header() {
               href="/"
               className={`px-3 py-1.5 rounded-sm text-sm font-semibold transition-colors ${
                 !isGamePage && pathname === "/"
-                  ? "bg-white/10 text-white"
+                  ? "bg-white/10 text-[var(--text-primary)]"
                   : "text-[var(--text-secondary)] hover:bg-white/5 hover:text-[var(--text-primary)]"
               }`}
             >
@@ -36,7 +36,7 @@ export default function Header() {
               href="/games"
               className={`px-3 py-1.5 rounded-sm text-sm font-semibold transition-colors ${
                 pathname === "/games"
-                  ? "bg-white/10 text-white"
+                  ? "bg-white/10 text-[var(--text-primary)]"
                   : "text-[var(--text-secondary)] hover:bg-white/5 hover:text-[var(--text-primary)]"
               }`}
             >
@@ -46,7 +46,7 @@ export default function Header() {
               href="/analysis"
               className={`px-3 py-1.5 rounded-sm text-sm font-semibold transition-colors ${
                 pathname === "/analysis"
-                  ? "bg-white/10 text-white"
+                  ? "bg-white/10 text-[var(--text-primary)]"
                   : "text-[var(--text-secondary)] hover:bg-white/5 hover:text-[var(--text-primary)]"
               }`}
             >
@@ -56,7 +56,7 @@ export default function Header() {
               href="/leaderboard"
               className={`px-3 py-1.5 rounded-sm text-sm font-semibold transition-colors ${
                 pathname === "/leaderboard"
-                  ? "bg-white/10 text-white"
+                  ? "bg-white/10 text-[var(--text-primary)]"
                   : "text-[var(--text-secondary)] hover:bg-white/5 hover:text-[var(--text-primary)]"
               }`}
             >
@@ -74,7 +74,7 @@ export default function Header() {
                 <div className="flex items-center gap-4">
                   <Link 
                     href={`/profile/${encodeURIComponent(user.username)}`}
-                    className="flex items-center gap-2 text-white hover:text-[var(--text-primary)] transition-colors group"
+                    className="flex items-center gap-2 text-[var(--text-primary)] hover:text-[var(--text-primary)] transition-colors group"
                   >
                     <span className="text-sm font-bold group-hover:underline">{user.username}</span>
                   </Link>
@@ -87,7 +87,7 @@ export default function Header() {
                 </div>
               ) : (
                 <>
-                  <Link href="/login" className="text-sm font-medium text-[var(--text-secondary)] hover:text-white transition-colors">Log In</Link>
+                  <Link href="/login" className="text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">Log In</Link>
                   <Link href="/signup" className="text-sm font-medium px-4 py-1.5 bg-[var(--bg-input)] hover:bg-white/10 text-[var(--text-primary)] rounded-sm border border-[var(--border)] transition-colors">Sign Up</Link>
                 </>
               )}

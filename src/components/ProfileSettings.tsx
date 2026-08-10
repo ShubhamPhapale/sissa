@@ -69,7 +69,7 @@ export default function ProfileSettings({ username }: { username: string }) {
           <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Username</label>
           <input
             type="text"
-            className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-white focus:outline-none focus:border-[var(--accent)]"
+            className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
             value={newUsername}
             onChange={(e) => setNewUsername(e.target.value)}
             minLength={3}
@@ -79,7 +79,7 @@ export default function ProfileSettings({ username }: { username: string }) {
           <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Current Password (required to save changes)</label>
           <input
             type="password"
-            className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-white focus:outline-none focus:border-[var(--accent)]"
+            className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
             required
@@ -89,7 +89,7 @@ export default function ProfileSettings({ username }: { username: string }) {
           <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">New Password (leave blank to keep current)</label>
           <input
             type="password"
-            className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-white focus:outline-none focus:border-[var(--accent)]"
+            className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             minLength={6}

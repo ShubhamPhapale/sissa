@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 
 type PlayerStats = {
   id: number;
@@ -37,7 +38,7 @@ export default function LeaderboardClient({
     <div className="mx-auto max-w-4xl">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Global Leaderboard</h1>
+          <h1 className="text-3xl font-bold text-[var(--text-primary)]">Global Leaderboard</h1>
           <span className="text-sm text-[var(--text-muted)]">Top 100 Players</span>
         </div>
         
@@ -48,8 +49,8 @@ export default function LeaderboardClient({
               onClick={() => setActiveTab(tab)}
               className={`flex-1 sm:flex-none px-5 py-2 text-sm font-medium rounded-md capitalize transition-colors ${
                 activeTab === tab
-                  ? "bg-[var(--accent)] text-white shadow-sm"
-                  : "text-[var(--text-secondary)] hover:text-white hover:bg-white/5"
+                  ? "bg-[var(--accent)] text-[var(--text-primary)] shadow-sm"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-black/5"
               }`}
             >
               {tab}
@@ -74,12 +75,14 @@ export default function LeaderboardClient({
               const totalGames = player.wins + player.draws + player.losses;
               
               return (
-                <tr key={player.id} className="hover:bg-white/5 transition-colors">
+                <tr key={player.id} className="hover:bg-black/5 transition-colors">
                   <td className="p-4 text-center font-mono text-sm text-[var(--text-secondary)]">
                     {index + 1}
                   </td>
                   <td className="p-4">
-                    <div className="font-semibold text-white">{player.username}</div>
+                    <Link href={`/profile/${encodeURIComponent(player.username)}`} className="font-semibold text-[var(--text-primary)] hover:text-[var(--accent)] transition-colors">
+                      {player.username}
+                    </Link>
                   </td>
                   <td className="p-4 text-right">
                     <span className="font-bold text-[var(--accent)]">{player.rating}</span>

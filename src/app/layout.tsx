@@ -23,12 +23,15 @@ export const viewport = {
 
 import { AuthProvider } from "@/components/AuthProvider";
 
+import OnlinePlayers from "@/components/OnlinePlayers";
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className="antialiased">
         <AuthProvider>
           {children}
+          <OnlinePlayers />
         </AuthProvider>
       </body>
     </html>

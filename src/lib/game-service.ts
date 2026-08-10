@@ -30,6 +30,11 @@ export function elapsedSecondsFor(game: GameRow): number {
   
   let ms = Date.now() - new Date(since).getTime();
   
+  // If the game doesn't have both players yet (e.g., Play with Friend), do not tick the clock
+  if (!game.lastMoveAt && (!game.whitePlayerName || !game.blackPlayerName)) {
+    return 0;
+  }
+
   // Grace period before clock starts running down for the first move
   if (!game.lastMoveAt) {
     const estimatedDuration = game.timeControl + 40 * game.increment;

@@ -77,6 +77,12 @@ class StockfishSingleton {
           this.currentResolve(null);
           this.currentResolve = null;
         }
+        if (this.currentTimeout) {
+          clearTimeout(this.currentTimeout);
+          this.currentTimeout = null;
+        }
+        this.isProcessing = false;
+        this.processQueue();
       });
     });
 
@@ -84,6 +90,42 @@ class StockfishSingleton {
   }
 
   private handleEngineMessage(line: string) {
+    if (line.startsWith("bestmove")) {
+      const match = line.match(/bestmove ([a-h1-8qrbn]+)/);
+      if (match) {
+        this.currentAnalysis.bestMove = match[1];
+        if (!this.currentAnalysis.bestMoveSan && this.translator) {
+          try {
+            this.currentAnalysis.bestMoveSan = this.translator([match[1]])[0];
+          } catch {
+            // ignore
+          }
+        }
+      }
+
+      if (this.currentResolve) {
+        const result = {
+          bestMove: this.currentAnalysis.bestMove || "unknown",
+          bestMoveSan: this.currentAnalysis.bestMoveSan,
+          score: this.currentAnalysis.score || 0,
+          scoreText: this.currentAnalysis.scoreText || "0.00",
+          depth: this.currentAnalysis.depth || 0,
+          pv: this.currentAnalysis.pv || [],
+          pvSan: this.currentAnalysis.pvSan || [],
+        };
+
+        this.currentResolve(result as StockfishAnalysis);
+        this.currentResolve = null;
+      }
+      
+      if (this.currentTimeout) clearTimeout(this.currentTimeout);
+      this.currentTimeout = null;
+
+      this.isProcessing = false;
+      this.processQueue();
+      return;
+    }
+
     if (!this.currentResolve) return;
 
     if (line.startsWith("info depth")) {
@@ -130,36 +172,6 @@ class StockfishSingleton {
       if (this.currentProgress) {
         this.currentProgress({ ...this.currentAnalysis });
       }
-    } else if (line.startsWith("bestmove")) {
-      const match = line.match(/bestmove ([a-h1-8qrbn]+)/);
-      if (match) {
-        this.currentAnalysis.bestMove = match[1];
-        if (!this.currentAnalysis.bestMoveSan && this.translator) {
-          try {
-            this.currentAnalysis.bestMoveSan = this.translator([match[1]])[0];
-          } catch {
-            // ignore
-          }
-        }
-      }
-
-      const result = {
-        bestMove: this.currentAnalysis.bestMove || "unknown",
-        bestMoveSan: this.currentAnalysis.bestMoveSan,
-        score: this.currentAnalysis.score || 0,
-        scoreText: this.currentAnalysis.scoreText || "0.00",
-        depth: this.currentAnalysis.depth || 0,
-        pv: this.currentAnalysis.pv || [],
-        pvSan: this.currentAnalysis.pvSan || [],
-      };
-
-      this.currentResolve(result as StockfishAnalysis);
-      this.currentResolve = null;
-      if (this.currentTimeout) clearTimeout(this.currentTimeout);
-      this.currentTimeout = null;
-
-      this.isProcessing = false;
-      this.processQueue();
     }
   }
 

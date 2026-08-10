@@ -129,7 +129,7 @@ export default function GamesPage() {
                       </div>
                     </div>
                     <div className="mt-1.5 text-xs text-[var(--text-muted)]">
-                      {g.id} · {formatTime(g.timeControl)}
+                      {formatTime(g.timeControl)}
                       {g.increment ? ` +${g.increment}` : ""}
                       {g.endReason ? ` · ${g.endReason}` : ""} ·{" "}
                       {new Date(g.createdAt).toLocaleString()}

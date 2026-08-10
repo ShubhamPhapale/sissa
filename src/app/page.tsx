@@ -17,6 +17,15 @@ interface GameSummary {
   increment: number;
 }
 
+interface LobbyGame {
+  id: number;
+  rating: number;
+  timeControl: number;
+  increment: number;
+  username: string;
+  userId: number;
+}
+
 export default function Home() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -25,6 +34,7 @@ export default function Home() {
   const [increment, setIncrement] = useState(0);
   const [botLevel, setBotLevel] = useState(5);
   const [recentGames, setRecentGames] = useState<GameSummary[]>([]);
+  const [lobbyGames, setLobbyGames] = useState<LobbyGame[]>([]);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -42,11 +52,26 @@ export default function Home() {
     }
   }, []);
 
+  const fetchLobby = useCallback(async () => {
+    if (inQueue) return;
+    try {
+      const res = await fetch("/api/matchmaking/lobby", { cache: "no-store" });
+      const data = await res.json();
+      setLobbyGames(data.lobby ?? []);
+    } catch {
+      // ignore
+    }
+  }, [inQueue]);
+
   useEffect(() => {
     fetchRecentGames();
-    const id = setInterval(fetchRecentGames, 5000);
+    fetchLobby();
+    const id = setInterval(() => {
+      fetchRecentGames();
+      fetchLobby();
+    }, 10000); // 10 seconds for lobby & games
     return () => clearInterval(id);
-  }, [fetchRecentGames]);
+  }, [fetchRecentGames, fetchLobby]);
 
   // Matchmaking poll
   useEffect(() => {
@@ -128,11 +153,41 @@ export default function Home() {
   };
 
   const handleCancelQueue = async () => {
-    setInQueue(false);
     try {
       await fetch("/api/matchmaking", { method: "DELETE" });
+    } catch { }
+    setInQueue(false);
+    fetchLobby();
+  };
+
+  const handleJoinLobby = async (matchmakingId: number) => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    setCreating(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/matchmaking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          timeControl: selectedTime,
+          increment,
+          joinMatchmakingId: matchmakingId
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.matched && data.gameId) {
+        router.push(`/game/${data.gameId}`);
+      } else {
+        setError(data.error ?? "Failed to join this game");
+        fetchLobby();
+      }
     } catch {
-      // ignore
+      setError("Network error");
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -171,13 +226,13 @@ export default function Home() {
         <section className="mx-auto mb-12 max-w-4xl pt-8 md:pt-16 lg:pt-24 pb-8 md:pb-12 text-center">
           <div className="flex flex-col items-center justify-center space-y-8">
             <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--accent)] to-orange-600 shadow-xl shadow-orange-500/20 md:h-24 md:w-24">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-10 w-10 text-white md:h-12 md:w-12">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-10 w-10 text-[var(--text-primary)] md:h-12 md:w-12">
                 <path d="M19 22H5c-1.1 0-2-.9-2-2v-2h18v2c0 1.1-.9 2-2 2zM17 2H7c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-6 9H9v2h2v2h2v-2h2v-2h-2V9h-2v2zM7 10h1v4H7v-4zm9 0h1v4h-1v-4z" />
               </svg>
             </div>
             
             <div className="space-y-4">
-              <h1 className="max-w-3xl text-4xl font-black tracking-tight text-white md:text-6xl mx-auto">
+              <h1 className="max-w-3xl text-4xl font-black tracking-tight text-[var(--text-primary)] md:text-6xl mx-auto">
                 Play chess online against real players.
               </h1>
             </div>
@@ -200,7 +255,7 @@ export default function Home() {
                   <Link href="/games" className="btn btn-secondary inline-flex items-center gap-2 px-6 py-3.5 text-base">
                     Browse live games
                   </Link>
-                  <Link href="/leaderboard" className="btn btn-secondary inline-flex items-center gap-2 px-6 py-3.5 text-base bg-white/5 border-white/10 hover:bg-white/10">
+                  <Link href="/leaderboard" className="btn btn-secondary inline-flex items-center gap-2 px-6 py-3.5 text-base bg-black/5 border-white/10 hover:bg-black/10">
                     Leaderboard
                   </Link>
                 </>
@@ -270,7 +325,7 @@ export default function Home() {
                       }}
                       className={`flex flex-col items-center justify-center min-h-[72px] rounded-xl p-2 transition-all border ${
                         selectedTime === preset.time && increment === preset.inc
-                          ? "bg-[var(--accent)] border-transparent text-white shadow-lg shadow-orange-500/20 scale-105 z-10"
+                          ? "bg-[var(--accent)] border-transparent text-[var(--text-primary)] shadow-lg shadow-orange-500/20 scale-105 z-10"
                           : "bg-[var(--bg-input)] border-transparent text-[var(--text-secondary)] hover:bg-[var(--border)]"
                       }`}
                     >
@@ -329,6 +384,35 @@ export default function Home() {
                   </button>
                 </div>
               </>
+            )}
+            
+            {/* Lobby List */}
+            {!inQueue && lobbyGames.length > 0 && (
+              <div className="card flex flex-col overflow-hidden mb-6 md:mb-0 mt-6">
+                <div className="bg-[var(--bg-card)] border-b border-[var(--border)] px-4 py-3 sticky top-0 z-10 flex items-center justify-between">
+                  <h3 className="font-bold text-[var(--text-primary)] flex items-center gap-2">
+                    Lobby <span className="text-xs bg-[var(--accent)] text-white px-2 py-0.5 rounded-full">{lobbyGames.length}</span>
+                  </h3>
+                </div>
+                <div className="flex-1 overflow-y-auto max-h-[300px]">
+                  {lobbyGames.map(g => (
+                    <button
+                      key={g.id}
+                      onClick={() => handleJoinLobby(g.id)}
+                      className="w-full text-left px-4 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-input)] transition-colors flex items-center justify-between group"
+                    >
+                      <div>
+                        <div className="font-semibold text-[var(--text-primary)]">{g.username}</div>
+                        <div className="text-xs text-[var(--text-secondary)]">{g.rating} Rating</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-mono text-sm text-[var(--text-primary)] font-bold">{Math.floor(g.timeControl/60)}{g.increment > 0 ? `+${g.increment}` : ""}</div>
+                        <div className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider group-hover:text-[var(--accent)] transition-colors">Play</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
 
