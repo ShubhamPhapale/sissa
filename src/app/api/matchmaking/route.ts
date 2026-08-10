@@ -118,6 +118,8 @@ export async function GET(req: NextRequest) {
     // Check if still in queue
     const [inQueue] = await db.select().from(matchmaking).where(eq(matchmaking.userId, session.userId));
     if (inQueue) {
+      // Keep request alive while user is polling
+      await db.update(matchmaking).set({ createdAt: new Date() }).where(eq(matchmaking.id, inQueue.id));
       return NextResponse.json({ matched: false });
     }
 

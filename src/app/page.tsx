@@ -69,7 +69,7 @@ export default function Home() {
     const id = setInterval(() => {
       fetchRecentGames();
       fetchLobby();
-    }, 10000); // 10 seconds for lobby & games
+    }, 5000); // 5 seconds for lobby & games
     return () => clearInterval(id);
   }, [fetchRecentGames, fetchLobby]);
 
@@ -271,17 +271,17 @@ export default function Home() {
             <div className="card flex flex-col overflow-hidden h-[500px]">
               <div className="bg-[var(--bg-card)] border-b border-[var(--border)] px-4 py-4 sticky top-0 z-10 flex items-center justify-between">
                 <h3 className="font-bold text-lg text-[var(--text-primary)] flex items-center gap-2">
-                  Lobby <span className="text-xs bg-[var(--accent)] text-white px-2 py-0.5 rounded-full">{lobbyGames.length}</span>
+                  Lobby <span className="text-xs bg-[var(--accent)] text-white px-2 py-0.5 rounded-full">{lobbyGames.filter(g => !user || g.userId !== user.id).length}</span>
                 </h3>
               </div>
               <div className="flex-1 overflow-y-auto">
-                {lobbyGames.length === 0 ? (
+                {lobbyGames.filter(g => !user || g.userId !== user.id).length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-[var(--text-muted)] p-6 text-center">
                     <p className="mb-2">No active challenges right now.</p>
                     <p className="text-sm">Create a Quick Match to invite others to play!</p>
                   </div>
                 ) : (
-                  lobbyGames.map(g => (
+                  lobbyGames.filter(g => !user || g.userId !== user.id).map(g => (
                     <button
                       key={g.id}
                       onClick={() => handleJoinLobby(g.id)}
